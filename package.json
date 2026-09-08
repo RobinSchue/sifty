@@ -11,6 +11,9 @@
     "dist",
     "config"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "dev": "tsx src/index.ts",
     "build": "tsc",
