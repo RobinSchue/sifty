@@ -1,5 +1,5 @@
 {
-  "name": "sifty",
+  "name": "@rosc/sifty",
   "version": "0.1.0",
   "description": "Evaluates instruction, skill, and prompt files for AI tools (Copilot, Claude, ...).",
   "type": "module",
