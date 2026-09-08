@@ -1,0 +1,629 @@
+{
+  "schemaVersion": 1,
+  "tool": "copilot",
+  "criteriaVersion": "0.1.0",
+  "updated": "2026-09-08",
+
+  "axes": [
+    {
+      "id": "clarity",
+      "label": "Clarity & Precision",
+      "description": "Are the instructions concrete, consistent and free of room for interpretation?"
+    },
+    {
+      "id": "structure",
+      "label": "Structure & Format",
+      "description": "Does the file match the format Copilot expects, and is it easy to navigate?"
+    },
+    {
+      "id": "completeness",
+      "label": "Completeness",
+      "description": "Does the file provide enough context and examples to actually take effect?"
+    },
+    {
+      "id": "cost",
+      "label": "Cost Efficiency",
+      "description": "How many tokens does the file cost per request — and is every one of them needed?"
+    },
+    {
+      "id": "security",
+      "label": "Security",
+      "description": "Does the file contain secrets, internal details or manipulable patterns?"
+    }
+  ],
+
+  "presets": {
+    "balanced": {
+      "label": "Balanced",
+      "weights": { "clarity": 1, "structure": 1, "completeness": 1, "cost": 1, "security": 1 }
+    },
+    "cost": {
+      "label": "Cost focus",
+      "weights": { "clarity": 1.5, "structure": 1, "completeness": 0.8, "cost": 2.5, "security": 1 }
+    },
+    "security": {
+      "label": "Security focus",
+      "weights": { "clarity": 1, "structure": 1, "completeness": 1, "cost": 1, "security": 3 }
+    }
+  },
+  "defaultPreset": "balanced",
+
+  "fileKinds": [
+    {
+      "id": "repo-wide",
+      "label": "Repo-wide instructions",
+      "glob": "**/.github/copilot-instructions.md",
+      "note": "Loaded on EVERY request — token limits are markedly stricter."
+    },
+    {
+      "id": "scoped",
+      "label": "Scoped instructions",
+      "glob": "**/*.instructions.md",
+      "note": "Only applies when the applyTo glob matches."
+    }
+  ],
+  "defaultFileKind": "scoped",
+
+  "sets": {
+    "words": {
+      "fillerWords": [
+        "if possible",
+        "where possible",
+        "try to",
+        "generally",
+        "usually",
+        "in general",
+        "as a rule",
+        "basically",
+        "ideally",
+        "maybe",
+        "possibly",
+        "as appropriate",
+        "appropriate",
+        "as needed",
+        "reasonable",
+        "sensible",
+        "properly",
+        "clean code",
+        "high quality",
+        "good quality",
+        "best practices",
+        "make sure to",
+        "please",
+        "and so on",
+        "etc."
+      ],
+      "outputConstraintMarkers": [
+        "code only",
+        "only the code",
+        "no explanation",
+        "without explanation",
+        "do not explain",
+        "no commentary",
+        "only output",
+        "respond with only",
+        "answer only",
+        "at most",
+        "maximum",
+        "max.",
+        "keep responses",
+        "concise",
+        "brief",
+        "bullet points only"
+      ],
+      "exampleMarkers": ["e.g.", "example", "for instance", "such as", "instead of:", "✅", "❌"],
+      "negativeRuleMarkers": ["not", "never", "avoid", "don't", "do not", "no ", "❌"],
+      "stopwordsEn": [
+        "the",
+        "and",
+        "or",
+        "of",
+        "to",
+        "is",
+        "are",
+        "for",
+        "with",
+        "that",
+        "this",
+        "when",
+        "if",
+        "not",
+        "do",
+        "use",
+        "should",
+        "must",
+        "always",
+        "never",
+        "any",
+        "from",
+        "on",
+        "as",
+        "be",
+        "by",
+        "it",
+        "you",
+        "your",
+        "each",
+        "into",
+        "only",
+        "before",
+        "after",
+        "than",
+        "such"
+      ],
+      "stopwordsDe": [
+        "der",
+        "die",
+        "das",
+        "und",
+        "oder",
+        "von",
+        "zu",
+        "ist",
+        "sind",
+        "für",
+        "mit",
+        "dass",
+        "wenn",
+        "nicht",
+        "immer",
+        "nie",
+        "alle",
+        "jede",
+        "aus",
+        "auf",
+        "als",
+        "sein",
+        "werden",
+        "soll",
+        "muss",
+        "kein",
+        "eine",
+        "einen",
+        "dem",
+        "den",
+        "im",
+        "am",
+        "beim",
+        "durch",
+        "nach",
+        "vor",
+        "wird"
+      ]
+    },
+
+    "patterns": {
+      "secrets": [
+        { "id": "openai-key", "re": "sk-[A-Za-z0-9]{20,}", "hint": "OpenAI-style API key" },
+        {
+          "id": "github-pat",
+          "re": "gh[pousr]_[A-Za-z0-9]{30,}",
+          "hint": "GitHub personal access token"
+        },
+        { "id": "aws-key", "re": "AKIA[0-9A-Z]{16}", "hint": "AWS access key id" },
+        { "id": "google-key", "re": "AIza[0-9A-Za-z\\-_]{35}", "hint": "Google API key" },
+        {
+          "id": "private-key",
+          "re": "-----BEGIN [A-Z ]*PRIVATE KEY-----",
+          "hint": "Private key in plain text"
+        },
+        { "id": "bearer", "re": "Bearer\\s+[A-Za-z0-9._~+/-]{20,}", "hint": "Bearer token" },
+        {
+          "id": "assigned-secret",
+          "re": "(api[_-]?key|secret|password|token)\\s*[:=]\\s*[\"'][^\"']{8,}",
+          "flags": "i",
+          "hint": "Assigned secret (key/secret/password = \"...\")"
+        }
+      ],
+      "internalHosts": [
+        {
+          "id": "internal-tld",
+          "re": "\\b[a-z0-9-]+\\.(intern|internal|local|corp|lan)\\b",
+          "flags": "i",
+          "hint": "Internal hostname"
+        },
+        {
+          "id": "private-ip-url",
+          "re": "https?://(10\\.|192\\.168\\.|172\\.(1[6-9]|2[0-9]|3[01])\\.)",
+          "hint": "URL pointing into a private network"
+        },
+        {
+          "id": "internal-port",
+          "re": "https?://[a-z0-9.-]+:(8080|8443|9000|5432|3306)\\b",
+          "flags": "i",
+          "hint": "Internal service with port"
+        }
+      ],
+      "pii": [
+        {
+          "id": "email",
+          "re": "[A-Za-z0-9._%+-]+@(?!example\\.(com|org|net))[A-Za-z0-9.-]+\\.[A-Za-z]{2,}",
+          "hint": "Real email address"
+        },
+        { "id": "iban-de", "re": "\\bDE\\d{20}\\b", "hint": "IBAN" },
+        { "id": "phone-de", "re": "\\+49[\\s\\d/-]{8,}", "hint": "Phone number" }
+      ],
+      "injection": [
+        {
+          "id": "ignore-previous",
+          "re": "(ignore|disregard|forget)\\s+(all\\s+)?(previous|prior|above)\\s+(instructions|rules)",
+          "flags": "i",
+          "hint": "Classic injection pattern"
+        },
+        {
+          "id": "role-override",
+          "re": "you are now\\s+(a|an|in)\\b",
+          "flags": "i",
+          "hint": "Role takeover"
+        },
+        {
+          "id": "prompt-leak",
+          "re": "system\\s*prompt[^.\\n]{0,20}(reveal|print|show|output|leak)",
+          "flags": "i",
+          "hint": "Attempt to expose the system prompt"
+        }
+      ],
+      "globSyntax": [
+        {
+          "id": "too-broad",
+          "re": "^(\\*\\*|\\*\\*/\\*|\\*)$",
+          "hint": "Glob matches everything — such content belongs in the repo-wide file"
+        }
+      ]
+    }
+  },
+
+  "checks": [
+    {
+      "id": "cost.file-length",
+      "axis": "cost",
+      "label": "File length",
+      "weight": 4,
+      "mode": "mechanical",
+      "appliesTo": [],
+      "measure": { "type": "tokenCount", "params": { "estimator": "chars/4" } },
+      "scoring": {
+        "type": "bands",
+        "bands": [
+          { "upTo": 800, "score": 100 },
+          { "upTo": 1500, "score": 80 },
+          { "upTo": 3000, "score": 50 },
+          { "upTo": 5000, "score": 20 },
+          { "upTo": null, "score": 0 }
+        ]
+      },
+      "overrides": {
+        "repo-wide": {
+          "scoring": {
+            "type": "bands",
+            "bands": [
+              { "upTo": 400, "score": 100 },
+              { "upTo": 800, "score": 80 },
+              { "upTo": 1500, "score": 55 },
+              { "upTo": 2500, "score": 25 },
+              { "upTo": null, "score": 0 }
+            ]
+          },
+          "fix": "This file ships with every request. Anything that does not always apply belongs in a scoped file with applyTo."
+        }
+      },
+      "fix": "Shorten the file: cut repetition, turn prose into bullets, move detailed knowledge into its own file."
+    },
+    {
+      "id": "cost.redundancy",
+      "axis": "cost",
+      "label": "Repetition",
+      "weight": 2,
+      "mode": "mechanical",
+      "appliesTo": [],
+      "measure": { "type": "duplicateLines", "params": { "minLength": 25, "normalize": true } },
+      "scoring": { "type": "penalty", "perHit": 15, "floor": 0 },
+      "fix": "Merge duplicate rules — state each rule exactly once, or you pay for it twice on every request."
+    },
+    {
+      "id": "cost.output-constraint",
+      "axis": "cost",
+      "label": "Output constraint present",
+      "weight": 3,
+      "mode": "mechanical",
+      "appliesTo": [],
+      "requires": ["clarity.written-in-english"],
+      "measure": { "type": "markerPresence", "params": { "wordSet": "outputConstraintMarkers" } },
+      "scoring": { "type": "binary", "failScore": 0 },
+      "fix": "Add a constraint on response length or shape (e.g. \"changed code only, no explanation\"). Output tokens cost a multiple of input tokens."
+    },
+    {
+      "id": "cost.no-inline-bulk",
+      "axis": "cost",
+      "label": "No long inline blocks",
+      "weight": 1,
+      "mode": "mechanical",
+      "appliesTo": [],
+      "measure": { "type": "blockLength", "params": { "kind": "codeFence", "limit": 40 } },
+      "scoring": { "type": "penalty", "perHit": 25, "floor": 20 },
+      "fix": "Replace long code blocks with a minimal example or point to a file in the repo."
+    },
+
+    {
+      "id": "clarity.written-in-english",
+      "axis": "clarity",
+      "label": "Written in English",
+      "weight": 2,
+      "mode": "mechanical",
+      "appliesTo": [],
+      "severity": "warn",
+      "measure": {
+        "type": "languageGuess",
+        "params": {
+          "expected": "en",
+          "stopwordSets": { "en": "stopwordsEn", "de": "stopwordsDe" },
+          "minWords": 40,
+          "assumeOnUncertain": true,
+          "strip": ["frontmatter", "codeFence", "inlineCode", "url"]
+        }
+      },
+      "scoring": { "type": "binary", "failScore": 0 },
+      "fix": "Write instruction files in English. The codebase, the identifiers and the model's own instruction training are English — a language switch mid-context costs tokens and precision. Note: while this file is not English, the marker-based checks below cannot judge it and are reported as not applicable."
+    },
+    {
+      "id": "clarity.filler-words",
+      "axis": "clarity",
+      "label": "Filler and hedging words",
+      "weight": 3,
+      "mode": "mechanical",
+      "appliesTo": [],
+      "requires": ["clarity.written-in-english"],
+      "measure": { "type": "wordDensity", "params": { "wordSet": "fillerWords", "per": 100 } },
+      "scoring": {
+        "type": "bands",
+        "bands": [
+          { "upTo": 0.5, "score": 100 },
+          { "upTo": 1.5, "score": 80 },
+          { "upTo": 3, "score": 55 },
+          { "upTo": 5, "score": 30 },
+          { "upTo": null, "score": 10 }
+        ]
+      },
+      "fix": "Replace hedging with hard rules: instead of \"keep functions reasonably short\" write \"functions max. 30 lines\"."
+    },
+    {
+      "id": "clarity.one-rule-per-bullet",
+      "axis": "clarity",
+      "label": "One rule per bullet",
+      "weight": 1,
+      "mode": "mechanical",
+      "appliesTo": [],
+      "measure": { "type": "blockLength", "params": { "kind": "listItem", "limit": 200 } },
+      "scoring": { "type": "penalty", "perHit": 10, "floor": 20 },
+      "fix": "Split overlong bullets into single rules — one verifiable statement per line."
+    },
+    {
+      "id": "clarity.concrete-instructions",
+      "axis": "clarity",
+      "label": "Concrete instead of vague",
+      "weight": 3,
+      "mode": "ai",
+      "appliesTo": [],
+      "scoring": { "type": "ai" },
+      "question": "Rate how concrete and verifiable the instructions are. An instruction is concrete if a developer can decide without asking whether it was followed. Name the vaguest passages with line numbers.",
+      "fix": "Make vague instructions measurable — with a number, a file path, a library name or a concrete counter-example."
+    },
+    {
+      "id": "clarity.contradictions",
+      "axis": "clarity",
+      "label": "Freedom from contradictions",
+      "weight": 3,
+      "mode": "ai",
+      "appliesTo": [],
+      "scoring": { "type": "ai" },
+      "question": "Check the file for instructions that exclude each other or set conflicting priorities. Name every pair with both line numbers.",
+      "fix": "Resolve contradictions or state precedence explicitly (\"when in doubt, X wins\")."
+    },
+
+    {
+      "id": "structure.frontmatter-valid",
+      "axis": "structure",
+      "label": "Valid frontmatter",
+      "weight": 3,
+      "mode": "mechanical",
+      "appliesTo": ["scoped"],
+      "measure": { "type": "frontmatterValid" },
+      "scoring": { "type": "binary", "failScore": 0 },
+      "fix": "Add YAML frontmatter between --- at the top of the file, or fix the syntax error."
+    },
+    {
+      "id": "structure.applyto-present",
+      "axis": "structure",
+      "label": "applyTo present",
+      "weight": 4,
+      "mode": "mechanical",
+      "appliesTo": ["scoped"],
+      "requires": ["structure.frontmatter-valid"],
+      "measure": { "type": "frontmatterField", "params": { "field": "applyTo" } },
+      "scoring": { "type": "binary", "failScore": 0 },
+      "fix": "Add applyTo to the frontmatter — without a glob the file does not reliably take effect."
+    },
+    {
+      "id": "structure.applyto-valid",
+      "axis": "structure",
+      "label": "applyTo is a valid glob",
+      "weight": 3,
+      "mode": "mechanical",
+      "appliesTo": ["scoped"],
+      "requires": ["structure.applyto-present"],
+      "measure": { "type": "globValidity", "params": { "field": "applyTo" } },
+      "scoring": { "type": "binary", "failScore": 0 },
+      "fix": "Fix the glob, e.g. \"src/**/*.vue\" instead of \"src/*.vue\" for nested folders."
+    },
+    {
+      "id": "structure.applyto-scoped",
+      "axis": "structure",
+      "label": "applyTo is selective",
+      "weight": 2,
+      "mode": "mechanical",
+      "appliesTo": ["scoped"],
+      "requires": ["structure.applyto-valid"],
+      "measure": {
+        "type": "globBreadth",
+        "params": { "field": "applyTo", "patternSet": "globSyntax" }
+      },
+      "scoring": { "type": "binary", "failScore": 30 },
+      "fix": "The glob matches every file. Either narrow it down or move the content into the repo-wide file."
+    },
+    {
+      "id": "structure.headings",
+      "axis": "structure",
+      "label": "Heading outline",
+      "weight": 2,
+      "mode": "mechanical",
+      "appliesTo": [],
+      "measure": {
+        "type": "headingStructure",
+        "params": { "minHeadingsFromLines": 40, "allowLevelSkips": false }
+      },
+      "scoring": {
+        "type": "bands",
+        "bands": [
+          { "upTo": 0, "score": 100 },
+          { "upTo": 1, "score": 70 },
+          { "upTo": null, "score": 40 }
+        ]
+      },
+      "fix": "Break sections up with headings and do not skip levels (## directly after #)."
+    },
+    {
+      "id": "structure.lists-over-prose",
+      "axis": "structure",
+      "label": "Bullets instead of prose",
+      "weight": 1,
+      "mode": "mechanical",
+      "appliesTo": [],
+      "measure": { "type": "blockLength", "params": { "kind": "paragraph", "limit": 400 } },
+      "scoring": { "type": "penalty", "perHit": 15, "floor": 20 },
+      "fix": "Break long paragraphs into bullets — rules are followed more reliably than prose."
+    },
+
+    {
+      "id": "completeness.examples",
+      "axis": "completeness",
+      "label": "Examples present",
+      "weight": 3,
+      "mode": "mechanical",
+      "appliesTo": [],
+      "requires": ["clarity.written-in-english"],
+      "measure": {
+        "type": "markerPresence",
+        "params": { "wordSet": "exampleMarkers", "orCodeFence": true }
+      },
+      "scoring": { "type": "binary", "failScore": 0 },
+      "fix": "Add at least one short example — ideally a contrasting pair (do this / not this)."
+    },
+    {
+      "id": "completeness.dos-and-donts",
+      "axis": "completeness",
+      "label": "Negative rules present",
+      "weight": 2,
+      "mode": "mechanical",
+      "appliesTo": [],
+      "requires": ["clarity.written-in-english"],
+      "measure": { "type": "markerPresence", "params": { "wordSet": "negativeRuleMarkers" } },
+      "scoring": { "type": "binary", "failScore": 40 },
+      "fix": "State what explicitly must NOT be done — prohibitions often carry more weight than permissions."
+    },
+    {
+      "id": "completeness.project-context",
+      "axis": "completeness",
+      "label": "Project specificity",
+      "weight": 3,
+      "mode": "ai",
+      "appliesTo": [],
+      "scoring": { "type": "ai" },
+      "question": "Does the file contain knowledge specific to this project (stack, folder structure, in-house conventions), or does it consist of generic advice that would apply to any project? Generic advice is worthless because the model already knows it.",
+      "fix": "Cut the platitudes and replace them with project-specific knowledge (folders, libraries, in-house patterns)."
+    },
+    {
+      "id": "completeness.scope-statement",
+      "axis": "completeness",
+      "label": "Scope described",
+      "weight": 2,
+      "mode": "ai",
+      "appliesTo": [],
+      "scoring": { "type": "ai" },
+      "question": "Does the file make clear what it applies to and what it does not? Rate how clearly the scope is stated.",
+      "fix": "Add one or two opening sentences describing the scope."
+    },
+    {
+      "id": "completeness.output-constraint-sensible",
+      "axis": "completeness",
+      "label": "Output constraint is sensible",
+      "weight": 2,
+      "mode": "ai",
+      "appliesTo": [],
+      "requires": ["cost.output-constraint"],
+      "scoring": { "type": "ai" },
+      "question": "Is the existing constraint on response form sensible for this kind of task, or does it cut off information that is actually needed?",
+      "fix": "Adjust the output constraint: short enough to save cost, long enough to stay useful."
+    },
+
+    {
+      "id": "security.secrets",
+      "axis": "security",
+      "label": "Secrets in plain text",
+      "weight": 4,
+      "mode": "mechanical",
+      "appliesTo": [],
+      "severity": "blocker",
+      "measure": { "type": "patternHits", "params": { "patternSet": "secrets" } },
+      "scoring": { "type": "penalty", "perHit": 100, "floor": 0 },
+      "fix": "Remove the secret immediately, purge it from git history and rotate it. Reference an environment variable instead of the value."
+    },
+    {
+      "id": "security.internal-hosts",
+      "axis": "security",
+      "label": "Internal hosts and addresses",
+      "weight": 3,
+      "mode": "mechanical",
+      "appliesTo": [],
+      "severity": "blocker",
+      "measure": { "type": "patternHits", "params": { "patternSet": "internalHosts" } },
+      "scoring": { "type": "penalty", "perHit": 50, "floor": 0 },
+      "fix": "Replace internal hostnames with placeholders — otherwise they reach the AI provider on every call."
+    },
+    {
+      "id": "security.pii",
+      "axis": "security",
+      "label": "Personal data",
+      "weight": 2,
+      "mode": "mechanical",
+      "appliesTo": [],
+      "severity": "warn",
+      "measure": { "type": "patternHits", "params": { "patternSet": "pii" } },
+      "scoring": { "type": "penalty", "perHit": 40, "floor": 0 },
+      "fix": "Remove personal data or replace it with sample values (name@example.com)."
+    },
+    {
+      "id": "security.injection-patterns",
+      "axis": "security",
+      "label": "Injection patterns",
+      "weight": 2,
+      "mode": "mechanical",
+      "appliesTo": [],
+      "severity": "warn",
+      "measure": { "type": "patternHits", "params": { "patternSet": "injection" } },
+      "scoring": { "type": "penalty", "perHit": 50, "floor": 0 },
+      "fix": "Remove wording that tries to override existing rules — it is either injected or an invitation to abuse."
+    }
+  ],
+
+  "grades": [
+    { "min": 85, "label": "strong", "color": "green" },
+    { "min": 70, "label": "solid", "color": "green" },
+    { "min": 50, "label": "shaky", "color": "amber" },
+    { "min": 0, "label": "critical", "color": "red" }
+  ],
+
+  "security": {
+    "blockerCapsOverallAt": 40,
+    "reportBlockersSeparately": true
+  }
+}
