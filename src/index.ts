@@ -9,7 +9,7 @@ const program = new Command();
 program
   .name("sifty")
   .description(
-    "Evaluates instruction, skill, and prompt files for AI tools (Copilot, Claude, ...)."
+    "Evaluates instruction, skill, and prompt files for AI tools (Copilot, Claude, ...).",
   )
   .version("0.1.0");
 
@@ -32,7 +32,9 @@ program
     // and then the bundled AI call.
     console.log(chalk.bold(`\nFile: ${file}`));
     console.log(chalk.dim(`Target tool: ${options.tool}`));
-    console.log(chalk.dim(`Frontmatter fields: ${Object.keys(frontmatter).join(", ") || "(none)"}`));
+    console.log(
+      chalk.dim(`Frontmatter fields: ${Object.keys(frontmatter).join(", ") || "(none)"}`),
+    );
     console.log(chalk.dim(`Length (characters): ${content.length}`));
     console.log(chalk.yellow("\n→ Base setup is running. Checks will follow in the next step."));
   });

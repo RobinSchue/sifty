@@ -26,7 +26,8 @@ Sifty is a Node.js and TypeScript CLI that evaluates AI instruction, skill, and 
 
 - Prefer the existing stack: `commander`, `gray-matter`, `chalk`, `zod`, `dotenv`, and `@anthropic-ai/sdk`.
 - Add a dependency only when the current stack cannot reasonably solve the problem. Commit `package.json` and `package-lock.json` together when dependencies change.
-- Add focused tests with each new behavior once a test runner is configured. Until then, validate affected paths with the existing build command: `npm run build`.
+- Add focused tests with each new behavior once a test runner is configured. Until then, validate affected paths with `npm run format:check`, `npm run lint`, `npm run typecheck`, and `npm run build`.
+- Use Prettier for formatting. Do not add or enable ESLint rules that duplicate Prettier formatting rules.
 - Keep generated output (`dist/`) and environment files untracked.
 
 ## Security and documentation
