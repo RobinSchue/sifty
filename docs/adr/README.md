@@ -1,32 +1,33 @@
 # Architecture Decision Records (ADR)
 
-Dieses Verzeichnis enthält die Architecture Decision Records (ADRs) für dieses
-Projekt.
+This directory contains the Architecture Decision Records (ADRs) for this
+project.
 
-## Was ist ein ADR?
+## What is an ADR?
 
-Ein ADR (Architecture Decision Record) dokumentiert eine einzelne wichtige
-architektonische Entscheidung: den Kontext, die getroffene Entscheidung und
-ihre Konsequenzen. ADRs machen Entscheidungen nachvollziehbar und
-versioniert, statt sie nur in Commit-Historie oder Gedächtnis zu belassen.
-Das Format folgt dem Vorschlag von Michael Nygard
+An ADR (Architecture Decision Record) documents a single significant
+architectural decision: the context, the decision that was made, and its
+consequences. ADRs make decisions traceable and version-controlled, instead
+of leaving them only in commit history or memory. The format follows the
+proposal by Michael Nygard
 ([Documenting Architecture Decisions](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions)).
 
-## Naming-Konvention
+## Naming convention
 
-Jedes ADR ist eine eigene Markdown-Datei mit dem Namensschema:
+Each ADR is its own Markdown file following this naming scheme:
 
 ```
 NNNN-kebab-case-title.md
 ```
 
-- `NNNN` ist eine 4-stellige, fortlaufende Nummer (z. B. `0001`, `0002`, ...).
-- `kebab-case-title` ist ein kurzer, sprechender Titel in Kleinbuchstaben mit
-  Bindestrichen.
+- `NNNN` is a 4-digit, sequentially incrementing number (e.g. `0001`,
+  `0002`, ...).
+- `kebab-case-title` is a short, descriptive title in lowercase with
+  hyphens.
 
-Beispiel: `0002-use-zod-for-validation.md`
+Example: `0002-use-zod-for-validation.md`
 
-## Neues ADR anlegen
+## Creating a new ADR
 
-Für ein neues ADR die Datei [`template.md`](./template.md) kopieren, mit der
-nächsten freien Nummer benennen und ausfüllen.
+To create a new ADR, copy [`template.md`](./template.md), name it with the
+next available number, and fill it in.
