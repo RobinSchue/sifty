@@ -7,6 +7,10 @@
   "bin": {
     "sifty": "dist/index.js"
   },
+  "files": [
+    "dist",
+    "config"
+  ],
   "scripts": {
     "dev": "tsx src/index.ts",
     "build": "tsc",
