@@ -1,5 +1,11 @@
 node_modules/
 dist/
-.env
-.env.*
+.env*
+!.env.example
+.envrc
+*.key
+*.pem
+*.p12
+*.pfx
+*.crt
 *.log
