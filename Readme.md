@@ -4,8 +4,8 @@ Sifty rates instruction, skill and prompt files for AI coding tools. It answers 
 question: is this file clear, well structured, complete, cost-efficient and safe?
 
 > **Status: early.** The mechanical checks run, the scoring engine is in place, the
-> terminal report is readable, the AI layer is not connected yet. Scores are usable
-> for comparison, not yet as a gate.
+> terminal report is readable, and the AI layer is connected and optional. Scores are
+> usable for comparison, not yet as a gate.
 
 ## Why
 
@@ -33,6 +33,7 @@ Requires Node 18 or newer.
 sifty check <file> --tool copilot
 sifty check <file> --tool copilot --preset cost
 sifty check <file> --tool copilot --config ./my-criteria.json
+sifty check <file> --tool copilot --no-ai
 ```
 
 The file kind is detected from the path:
@@ -41,6 +42,31 @@ The file kind is detected from the path:
 | ---------------------------------------- | ----------- | --------------------------------------------- |
 | `.github/copilot-instructions.md`        | `repo-wide` | Loaded on every request — strict token limits |
 | `.github/instructions/*.instructions.md` | `scoped`    | Applies only where `applyTo` matches          |
+
+## AI checks
+
+Some checks need judgement, not pattern matching — concrete instructions,
+contradictions, project context, a scope statement, whether an output constraint is
+sensible. `config/copilot.json` currently defines 5 of these (`mode: "ai"`). Sifty
+bundles all of them into a single Anthropic API call per file; the mechanical checks
+stay offline and deterministic either way.
+
+Set `ANTHROPIC_API_KEY` as an environment variable, or drop it in a `.env` file in
+the working directory (`.env*` is gitignored):
+
+```
+ANTHROPIC_API_KEY=your-key-here
+```
+
+The call uses `claude-haiku-4-5`, chosen for cost. The response is validated; an
+invalid or incomplete one is retried once.
+
+Without a key, AI checks are skipped and a note goes to stderr. `--no-ai` skips them
+silently. If the API call itself fails, the report still prints, with a stderr note
+naming the reason. None of these affect the exit code — only blockers do. Axes with
+skipped checks show how many actually ran, e.g. `(3/5 checks)`.
+
+**Privacy:** when AI checks run, the full file content is sent to the Anthropic API.
 
 ## What it rates
 
@@ -116,6 +142,7 @@ src/
   report.types.ts       schema of a result
   config/load.ts        loading, validation, file-kind detection
   engine/text.ts        parses the file once for all measures
+  engine/ai.ts          bundled AI call, response validation, one retry
   engine/measures.ts    the mechanical measurements
   engine/runner.ts      file in, report out
   engine/scoring.ts     tool-agnostic math
@@ -140,7 +167,7 @@ then refuses to compile until the implementation exists in `measures.ts`.
 - [x] Scoring engine with not-applicable handling and blocker caps
 - [x] Mechanical checks (offline, free)
 - [x] Readable terminal output
-- [ ] Bundled AI call for the judgement-based checks
+- [x] Bundled AI call for the judgement-based checks
 - [ ] Rewritten version as a diff
 - [ ] Claude Code criteria
 - [ ] Composite review across several files: contradictions, overlaps, colliding triggers
