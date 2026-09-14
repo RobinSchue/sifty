@@ -1,9 +1,11 @@
 /**
  * Sifty — report schema.
  *
- * STUB: the shape grows with the scoring engine. Defined here (not in
- * criteria.types.ts) because the report describes a RUN, not the config.
+ * Defined here (not in criteria.types.ts) because the report describes a RUN,
+ * not the config.
  */
+
+import type { AxisId } from "./criteria.types.js";
 
 /** A single located observation backing a measurement or finding. */
 export interface Evidence {
@@ -33,6 +35,55 @@ export interface AiFinding {
   evidence?: Evidence[] | undefined;
 }
 
+/** Score of one check after requires-gating, 0-100, or excluded entirely. */
+export interface CheckScore {
+  checkId: string;
+  axis: AxisId;
+  label: string;
+  severity: "info" | "warn" | "blocker";
+  source: "mechanical" | "ai";
+  /** False when gated out by `requires`, not applicable to this file, or no AI data yet. */
+  applicable: boolean;
+  /** Absent when not applicable. */
+  score?: number | undefined;
+  evidence?: Evidence[] | undefined;
+}
+
+/** Weighted average of one axis' applicable check scores. */
+export interface AxisScore {
+  axis: AxisId;
+  label: string;
+  /** 0-100. 0 when no check on this axis had data (e.g. AI layer not connected yet). */
+  score: number;
+  /** Number of checks that actually contributed a score. */
+  checkCount: number;
+  /** Checks assigned to this axis for this file, whether or not they contributed. */
+  totalChecks: number;
+}
+
+/** A blocker-severity check that did not fully pass — caps the overall score. */
+export interface Blocker {
+  checkId: string;
+  label: string;
+  evidence?: Evidence[] | undefined;
+}
+
+/** One entry in the report's prioritized fix list. */
+export interface FixItem {
+  checkId: string;
+  axis: AxisId;
+  severity: "info" | "warn" | "blocker";
+  /** weight * (100 - score) — higher sorts first. */
+  impact: number;
+  text: string;
+  evidence?: Evidence[] | undefined;
+}
+
+export interface Grade {
+  label: string;
+  color: "green" | "amber" | "red";
+}
+
 export interface Report {
   tool: string;
   criteriaVersion: string;
@@ -41,4 +92,13 @@ export interface Report {
   preset: string;
   measurements: Measurement[];
   aiFindings: AiFinding[];
+  checkScores: CheckScore[];
+  axisScores: AxisScore[];
+  /** 0-100, after the blocker cap (if any) is applied. */
+  overallScore: number;
+  /** Present only when a blocker capped the score — the uncapped value. */
+  cappedFrom?: number | undefined;
+  grade: Grade;
+  blockers: Blocker[];
+  fixes: FixItem[];
 }
