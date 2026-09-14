@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { AI_MODEL, buildAiRequest, runAiChecks } from "./ai.js";
+import { AI_MODEL, buildAiRequest, runAiChecks, generateFixPrompt } from "./ai.js";
 import type { Check } from "../criteria.types.js";
 import type { AiClient } from "./ai.js";
 
@@ -224,5 +224,61 @@ describe("runAiChecks", () => {
     expect(result.error).toBeUndefined();
     expect(result.findings).toHaveLength(2);
     expect(parse).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("generateFixPrompt", () => {
+  it("returns empty prompts when there are no fixes", async () => {
+    const { short, full, error } = await generateFixPrompt({
+      report: { fixes: [] },
+      fileContent: "body",
+      fileKind: "scoped",
+      tool: "copilot",
+      client: { messages: { parse: async () => ({ parsed_output: {} }) } } as any,
+    });
+
+    expect(short).toBe("");
+    expect(full).toBe("");
+    expect(error).toBeUndefined();
+  });
+
+  it("generates fix prompts from a structured response", async () => {
+    const { client, parse } = makeClient(async () => ({
+      parsed_output: {
+        short: "Issue 1: vague. Issue 2: lacks examples. Please fix.",
+        full: "Here is your file: [...]. Problems: 1) vague. 2) lacks examples. Improve clarity and add examples.",
+      },
+    }));
+
+    const { short, full, error } = await generateFixPrompt({
+      report: { fixes: [{ text: "Add examples", impact: 50 }] },
+      fileContent: "# Title\nbody",
+      fileKind: "scoped",
+      tool: "copilot",
+      client,
+    });
+
+    expect(parse).toHaveBeenCalledOnce();
+    expect(short).toContain("vague");
+    expect(full).toContain("Problems");
+    expect(error).toBeUndefined();
+  });
+
+  it("returns error when client throws", async () => {
+    const { client } = makeClient(async () => {
+      throw new Error("503 Service Unavailable");
+    });
+
+    const { short, full, error } = await generateFixPrompt({
+      report: { fixes: [{ text: "Fix this", impact: 100 }] },
+      fileContent: "body",
+      fileKind: "scoped",
+      tool: "copilot",
+      client,
+    });
+
+    expect(short).toBe("");
+    expect(full).toBe("");
+    expect(error).toContain("503");
   });
 });

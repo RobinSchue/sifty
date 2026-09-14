@@ -277,3 +277,101 @@ function clampScore(score: number): number {
 function oneLine(value: string): string {
   return value.replace(/\s+/g, " ").trim();
 }
+
+/* ================================================================ */
+/* Fix Prompt Generation — AI-assisted optimization suggestions     */
+/* ================================================================ */
+
+/** Better model for generating helpful fix prompts — worth the ~2-3x cost for quality. */
+const AI_MODEL_FIX_PROMPT = "claude-sonnet-5";
+
+export const fixPromptResponseSchema = z.object({
+  short: z.string(),
+  full: z.string(),
+});
+
+export type FixPromptResponse = z.infer<typeof fixPromptResponseSchema>;
+
+export interface GenerateFixPromptArgs {
+  report: { readonly fixes: Array<{ readonly text: string; readonly impact: number }> };
+  fileContent: string;
+  fileKind: string;
+  tool: string;
+  apiKey?: string;
+  client?: AiClient;
+}
+
+/**
+ * Generate human-friendly fix prompts from a completed report.
+ * Produces two formats: short (quick list) and full (detailed prompt for Claude/ChatGPT).
+ * No structured output call if there are no fixes — just return empty prompts.
+ */
+export async function generateFixPrompt(args: GenerateFixPromptArgs): Promise<{
+  short: string;
+  full: string;
+  error?: string;
+}> {
+  if (!args.report.fixes || args.report.fixes.length === 0) {
+    return { short: "", full: "" };
+  }
+
+  const client = args.client ?? createClient(args.apiKey);
+  if (!client) {
+    return {
+      short: "",
+      full: "",
+      error: "Fix prompt requires an Anthropic client or API key.",
+    };
+  }
+
+  try {
+    const request: ParseableMessageCreateParams = {
+      model: AI_MODEL_FIX_PROMPT,
+      max_tokens: 2048,
+      messages: [
+        {
+          role: "user",
+          content: buildFixPromptRequest(args),
+        },
+      ],
+      output_config: {
+        format: zodOutputFormat(fixPromptResponseSchema),
+      },
+    };
+
+    const response = await client.messages.parse(request);
+    const parsed = fixPromptResponseSchema.safeParse(response.parsed_output);
+
+    if (!parsed.success) {
+      return {
+        short: "",
+        full: "",
+        error: `Invalid fix prompt response: ${parsed.error.issues[0]?.message ?? "unknown"}`,
+      };
+    }
+
+    return { short: parsed.data.short, full: parsed.data.full };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return { short: "", full: "", error: `Fix prompt generation failed: ${message}` };
+  }
+}
+
+function buildFixPromptRequest(args: GenerateFixPromptArgs): string {
+  const fixList = args.report.fixes
+    .map((fix, i) => `${i + 1}. ${fix.text} (impact: ${fix.impact})`)
+    .join("\n");
+
+  return [
+    `File: ${args.fileKind} (${args.tool})`,
+    `Content:\n\`\`\`\n${args.fileContent.slice(0, 500)}\n${args.fileContent.length > 500 ? "...\n" : ""}\`\`\``,
+    "Found issues (ranked by impact):",
+    fixList,
+    "",
+    "Generate two prompts:",
+    '1. "short": A brief 1-2 sentence suggestion: "Here are the issues: [...]. Please fix them."',
+    '2. "full": A complete, ready-to-use prompt for Claude/ChatGPT that includes the full file content and a detailed ask to improve it.',
+    "",
+    'Return only valid JSON matching: {"short": "...", "full": "..."}',
+  ].join("\n");
+}
