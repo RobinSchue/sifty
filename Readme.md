@@ -126,6 +126,7 @@ src/
 ```bash
 npm install
 npm run dev -- check examples/good.instructions.md --tool copilot
+npm run test
 npm run build
 ```
 
