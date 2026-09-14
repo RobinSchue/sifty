@@ -4,7 +4,8 @@ Sifty rates instruction, skill and prompt files for AI coding tools. It answers 
 question: is this file clear, well structured, complete, cost-efficient and safe?
 
 > **Status: early.** The mechanical checks run, the scoring engine is in place, the
-> AI layer is not connected yet. Scores are usable for comparison, not yet as a gate.
+> terminal report is readable, the AI layer is not connected yet. Scores are usable
+> for comparison, not yet as a gate.
 
 ## Why
 
@@ -125,6 +126,7 @@ src/
 ```bash
 npm install
 npm run dev -- check examples/good.instructions.md --tool copilot
+npm run test
 npm run build
 ```
 
@@ -137,7 +139,7 @@ then refuses to compile until the implementation exists in `measures.ts`.
 - [x] Criteria as versioned config
 - [x] Scoring engine with not-applicable handling and blocker caps
 - [x] Mechanical checks (offline, free)
-- [ ] Readable terminal output
+- [x] Readable terminal output
 - [ ] Bundled AI call for the judgement-based checks
 - [ ] Rewritten version as a diff
 - [ ] Claude Code criteria

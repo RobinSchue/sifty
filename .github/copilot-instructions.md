@@ -12,6 +12,7 @@ Sifty is a Node.js and TypeScript CLI that evaluates AI instruction, skill, and 
   - Keep the summary lowercase, concise, and without a trailing period.
   - Examples: `feat(cli): add output format option`, `fix(checks): reject missing applyTo`.
 - Do not create branches, commits, tags, releases, or publish packages unless explicitly requested.
+- Do not include a Co-authored-by trailer in commit messages.
 
 ## TypeScript and CLI conventions
 
