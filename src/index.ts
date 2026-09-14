@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 import chalk from "chalk";
 import { Command } from "commander";
-import matter from "gray-matter";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
+
+import { analyzeFile } from "./engine/runner.js";
+import { formatReport } from "./reporting/format.js";
 
 const program = new Command();
 
@@ -18,25 +20,37 @@ program
   .description("Checks a single file")
   .argument("<file>", "Path to the file to check")
   .option("-t, --tool <tool>", "Target tool (e.g. copilot)", "copilot")
-  .action((file: string, options: { tool: string }) => {
+  .option("-p, --preset <preset>", "Scoring preset (e.g. balanced, cost, security)")
+  .option("-c, --config <path>", "Path to a custom criteria config, bypassing config/<tool>.json")
+  .action((file: string, options: { tool: string; preset?: string; config?: string }) => {
     if (!existsSync(file)) {
       console.error(chalk.red(`File not found: ${file}`));
       process.exitCode = 1;
       return;
     }
 
-    const raw = readFileSync(file, "utf-8");
-    const { data: frontmatter, content } = matter(raw);
+    let result: ReturnType<typeof analyzeFile>;
+    try {
+      result = analyzeFile(file, {
+        tool: options.tool,
+        ...(options.preset ? { preset: options.preset } : {}),
+        ...(options.config ? { configPath: options.config } : {}),
+      });
+    } catch (error) {
+      console.error(chalk.red(error instanceof Error ? error.message : String(error)));
+      process.exitCode = 1;
+      return;
+    }
 
-    // Placeholder: the next steps will add mechanical checks
-    // and then the bundled AI call.
-    console.log(chalk.bold(`\nFile: ${file}`));
-    console.log(chalk.dim(`Target tool: ${options.tool}`));
-    console.log(
-      chalk.dim(`Frontmatter fields: ${Object.keys(frontmatter).join(", ") || "(none)"}`),
-    );
-    console.log(chalk.dim(`Length (characters): ${content.length}`));
-    console.log(chalk.yellow("\n→ Base setup is running. Checks will follow in the next step."));
+    console.log(formatReport(result.report));
+
+    for (const failure of result.failures) {
+      console.error(chalk.dim(`  (${failure.checkId}: ${failure.message} — skipped)`));
+    }
+
+    if (result.report.blockers.length > 0) {
+      process.exitCode = 1;
+    }
   });
 
 program.parse();
