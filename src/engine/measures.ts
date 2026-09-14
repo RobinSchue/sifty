@@ -191,10 +191,13 @@ const patternHits: MeasureFn = ({ ctx, params, config }) => {
     re.lastIndex = 0;
     for (const match of ctx.raw.matchAll(re)) {
       const index = match.index ?? 0;
+      const rawExcerpt = excerptAt(ctx.raw, index);
+      // Replace any unredacted match with the redacted version to avoid leaking secrets
+      const excerpt = rawExcerpt.split(match[0]).join(redact(match[0]));
+
       evidence.push({
         line: lineAt(ctx.raw, index),
-        // Redact the match itself, keep a little context around it.
-        excerpt: `${redact(match[0])} — ${excerptAt(ctx.raw, index)}`,
+        excerpt,
         hint,
       });
     }
