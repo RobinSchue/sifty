@@ -5,6 +5,7 @@ import { config as loadEnv } from "dotenv";
 import { existsSync } from "node:fs";
 
 import { analyzeFile } from "./engine/runner.js";
+import { generateFixPrompt } from "./engine/ai.js";
 import { formatReport } from "./reporting/format.js";
 
 // `quiet` — dotenv 17 otherwise prints an info line to stdout, right into the report.
@@ -27,10 +28,12 @@ program
   .option("-p, --preset <preset>", "Scoring preset (e.g. balanced, cost, security)")
   .option("-c, --config <path>", "Path to a custom criteria config, bypassing config/<tool>.json")
   .option("--no-ai", "Skip the AI checks and score mechanically only")
+  .option("--generate-fix-prompt", "Generate AI-driven optimization prompts for the fixes found")
+  .option("--fix-prompt <style>", "Fix prompt style: short (brief list) or full (complete prompt). Default: full", "full")
   .action(
     async (
       file: string,
-      options: { tool: string; preset?: string; config?: string; ai: boolean },
+      options: { tool: string; preset?: string; config?: string; ai: boolean; generateFixPrompt?: boolean; fixPrompt: string },
     ) => {
       if (!existsSync(file)) {
         console.error(chalk.red(`File not found: ${file}`));
@@ -69,6 +72,28 @@ program
 
       for (const failure of result.failures) {
         console.error(chalk.dim(`  (${failure.checkId}: ${failure.message} — skipped)`));
+      }
+
+      if (options.generateFixPrompt) {
+        const apiKey = process.env["ANTHROPIC_API_KEY"];
+        const promptResult = await generateFixPrompt({
+          report: result.report,
+          fileContent: result.context.raw,
+          fileKind: result.report.fileKind,
+          tool: options.tool,
+          ...(apiKey ? { apiKey } : {}),
+        });
+
+        if (promptResult.error) {
+          console.error(chalk.dim(`Fix prompt generation skipped: ${promptResult.error}`));
+        } else if (promptResult.short || promptResult.full) {
+          console.log();
+          console.log(chalk.bold("Proposed fix:"));
+          if (options.fixPrompt === "short" || options.fixPrompt === "full") {
+            const style = options.fixPrompt === "short" ? promptResult.short : promptResult.full;
+            if (style) console.log(style);
+          }
+        }
       }
 
       if (result.report.blockers.length > 0) {
