@@ -93,13 +93,13 @@ describe("runMechanicalChecks", () => {
 });
 
 describe("analyzeContent", () => {
-  it("wires measurements through to real check scores via a temp config file", () => {
+  it("wires measurements through to real check scores via a temp config file", async () => {
     const config = makeConfig({
       checks: [makeCheck({ id: "clarity.frontmatter", measure: { type: "frontmatterValid" } })],
     });
     const { configPath } = writeTempTree(JSON.stringify(config), "a.instructions.md", "irrelevant");
 
-    const result = analyzeContent("a.md", "---\napplyTo: '**'\n---\nbody\n", {
+    const result = await analyzeContent("a.md", "---\napplyTo: '**'\n---\nbody\n", {
       tool: "ignored",
       configPath,
     });
@@ -111,7 +111,7 @@ describe("analyzeContent", () => {
 });
 
 describe("analyzeFile", () => {
-  it("reads the file from disk and analyzes it", () => {
+  it("reads the file from disk and analyzes it", async () => {
     const config = makeConfig({
       checks: [makeCheck({ id: "clarity.frontmatter", measure: { type: "frontmatterValid" } })],
     });
@@ -121,7 +121,7 @@ describe("analyzeFile", () => {
       "---\napplyTo: '**'\n---\nbody\n",
     );
 
-    const result = analyzeFile(filePath, { tool: "ignored", configPath });
+    const result = await analyzeFile(filePath, { tool: "ignored", configPath });
 
     expect(result.report.file).toBe(filePath);
     expect(result.report.checkScores[0]?.score).toBe(100);
