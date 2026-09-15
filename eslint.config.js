@@ -18,4 +18,30 @@ export default tseslint.config(
       },
     },
   },
+  {
+    // Wave 2 (AI provider port): the SDK stays behind src/providers/** so a
+    // second provider (EU cloud, self-hosted, local) never touches the
+    // engine — see src/engine/ai-provider.ts for the port it talks to instead.
+    files: ["src/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@anthropic-ai/sdk", "@anthropic-ai/sdk/*"],
+              message:
+                "Import the Anthropic SDK only in src/providers/** — everywhere else, depend on the AiProvider port (src/engine/ai-provider.ts).",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["src/providers/**/*.ts"],
+    rules: {
+      "no-restricted-imports": "off",
+    },
+  },
 );

@@ -7,8 +7,10 @@ import chalk from "chalk";
 import { Command, Option } from "commander";
 import { config as loadEnv } from "dotenv";
 
+import type { TokenUsage } from "./engine/ai-provider.js";
 import { analyzeFile } from "./engine/runner.js";
-import { generateFixPrompt } from "./engine/ai.js";
+import { generateFixPrompt } from "./fixprompt/generate.js";
+import { createAnthropicProvider } from "./providers/anthropic.js";
 import { formatReport } from "./reporting/format.js";
 
 // `quiet` — dotenv 17 otherwise prints an info line to stdout, right into the report.
@@ -20,6 +22,9 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const PACKAGE_JSON = JSON.parse(readFileSync(resolve(HERE, "../package.json"), "utf8")) as {
   version: string;
 };
+
+/** Higher-quality tier for the fix prompt — a human reads this directly, worth the extra cost. */
+const FIX_PROMPT_MODEL = "claude-sonnet-5";
 
 const program = new Command();
 
@@ -42,6 +47,7 @@ program
     "--generate-fix-prompt",
     "Generate an AI-driven optimization prompt for the fixes found (requires AI checks; ignored with --no-ai)",
   )
+  .option("--show-tokens", "Print input/output token usage for each AI call made")
   .addOption(
     new Option(
       "--fix-prompt <style>",
@@ -60,6 +66,7 @@ program
         ai: boolean;
         generateFixPrompt?: boolean;
         fixPrompt: "short" | "full";
+        showTokens?: boolean;
       },
     ) => {
       if (!existsSync(file)) {
@@ -68,13 +75,14 @@ program
         return;
       }
 
-      // Read once, reused for both the bundled AI checks and the fix-prompt call below.
+      // Read once, reused to build both AI providers below (bundled checks, fix prompt).
       const apiKey = process.env["ANTHROPIC_API_KEY"];
       if (options.ai && !apiKey) {
         console.error(
           chalk.dim("AI checks skipped: ANTHROPIC_API_KEY is not set — mechanical checks only."),
         );
       }
+      const checksProvider = options.ai && apiKey ? createAnthropicProvider({ apiKey }) : undefined;
 
       let result: Awaited<ReturnType<typeof analyzeFile>>;
       try {
@@ -82,7 +90,7 @@ program
           tool: options.tool,
           ...(options.preset ? { preset: options.preset } : {}),
           ...(options.config ? { configPath: options.config } : {}),
-          ...(options.ai && apiKey ? { ai: { apiKey } } : {}),
+          ...(checksProvider ? { provider: checksProvider } : {}),
         });
       } catch (error) {
         console.error(chalk.red(error instanceof Error ? error.message : String(error)));
@@ -102,16 +110,23 @@ program
         console.error(chalk.dim(`  (${failure.checkId}: ${failure.message} — skipped)`));
       }
 
+      let fixPromptUsage: TokenUsage | undefined;
+
       // --no-ai means no AI call at all, full stop — the fix prompt is AI-generated
       // too, so it follows the same flag instead of quietly making its own request.
       if (options.generateFixPrompt && options.ai) {
+        const fixPromptProvider = apiKey
+          ? createAnthropicProvider({ apiKey, model: FIX_PROMPT_MODEL })
+          : undefined;
+
         const promptResult = await generateFixPrompt({
           report: result.report,
           fileContent: result.context.raw,
           fileKind: result.report.fileKind,
           tool: options.tool,
-          ...(apiKey ? { apiKey } : {}),
+          ...(fixPromptProvider ? { provider: fixPromptProvider } : {}),
         });
+        fixPromptUsage = promptResult.usage;
 
         if (promptResult.error) {
           console.error(chalk.dim(`Fix prompt generation skipped: ${promptResult.error}`));
@@ -125,10 +140,31 @@ program
         }
       }
 
+      if (options.showTokens) {
+        printTokenUsage(result.usage, fixPromptUsage);
+      }
+
       if (result.report.blockers.length > 0) {
         process.exitCode = 1;
       }
     },
   );
+
+function printTokenUsage(checksUsage?: TokenUsage, fixPromptUsage?: TokenUsage): void {
+  console.log();
+  console.log(chalk.bold("Token usage:"));
+  if (!checksUsage && !fixPromptUsage) {
+    console.log(chalk.dim("  no AI call was made"));
+    return;
+  }
+  if (checksUsage) {
+    console.log(`  checks:     ${checksUsage.inputTokens} in / ${checksUsage.outputTokens} out`);
+  }
+  if (fixPromptUsage) {
+    console.log(
+      `  fix prompt: ${fixPromptUsage.inputTokens} in / ${fixPromptUsage.outputTokens} out`,
+    );
+  }
+}
 
 await program.parseAsync();

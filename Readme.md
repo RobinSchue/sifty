@@ -25,7 +25,7 @@ npm install -g @rosc/sifty
 npx @rosc/sifty check .github/copilot-instructions.md --tool copilot
 ```
 
-Requires Node 18 or newer.
+Requires Node 20 or newer.
 
 ## Usage
 
@@ -36,6 +36,7 @@ sifty check <file> --tool copilot --config ./my-criteria.json
 sifty check <file> --tool copilot --no-ai
 sifty check <file> --tool copilot --generate-fix-prompt
 sifty check <file> --tool copilot --generate-fix-prompt --fix-prompt full
+sifty check <file> --tool copilot --show-tokens
 ```
 
 The file kind is detected from the path:
@@ -68,7 +69,15 @@ silently. If the API call itself fails, the report still prints, with a stderr n
 naming the reason. None of these affect the exit code — only blockers do. Axes with
 skipped checks show how many actually ran, e.g. `(3/5 checks)`.
 
+Pass `--show-tokens` to print input/output token usage for each AI call made
+(bundled checks, and the fix prompt if `--generate-fix-prompt` was also given).
+
 **Privacy:** when AI checks run, the full file content is sent to the Anthropic API.
+
+The AI call itself goes through a small provider interface (`AiProvider`); Anthropic
+is the only implementation today, and it is the only place in the codebase that
+imports `@anthropic-ai/sdk` — everything else, including the scoring engine, only
+knows the interface.
 
 ## Fix suggestions (AI-driven)
 
@@ -152,17 +161,21 @@ The config is validated on load — unknown axes, missing word sets, dangling
 
 ```
 config/
-  copilot.json          criteria: axes, checks, thresholds, word lists
+  copilot.json           criteria: axes, checks, thresholds, word lists
 src/
-  index.ts              CLI entry point
-  criteria.types.ts     schema of a criteria config
-  report.types.ts       schema of a result
-  config/load.ts        loading, validation, file-kind detection
-  engine/text.ts        parses the file once for all measures
-  engine/ai.ts          bundled AI call, response validation, one retry
-  engine/measures.ts    the mechanical measurements
-  engine/runner.ts      file in, report out
-  engine/scoring.ts     tool-agnostic math
+  index.ts               CLI entry point
+  criteria.types.ts      schema of a criteria config
+  report.types.ts        schema of a result
+  config/load.ts         loading, validation, file-kind detection
+  engine/text.ts         parses the file once for all measures
+  engine/measures.ts     the mechanical measurements
+  engine/runner.ts       file in, report out
+  engine/scoring.ts      tool-agnostic math
+  engine/ai-provider.ts  the AiProvider port — no SDK import here
+  engine/ai-checks.ts    bundled AI call (via the port), response validation, one retry
+  providers/anthropic.ts the only file that imports @anthropic-ai/sdk
+  fixprompt/generate.ts  AI-driven fix-prompt generation (via the port)
+  reporting/format.ts    Report -> terminal output
 ```
 
 ## Development

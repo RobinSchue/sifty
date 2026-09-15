@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { AiClient } from "./ai.js";
+import type { AiProvider } from "./ai-provider.js";
 import {
   analyzeContent,
   analyzeFile,
@@ -48,14 +48,9 @@ function makeAiCheck(id: string, question = `Question for ${id}?`): Check {
   };
 }
 
-function makeClient(parseImpl: AiClient["messages"]["parse"]) {
-  const parse = vi.fn<AiClient["messages"]["parse"]>(parseImpl);
-  return {
-    client: {
-      messages: { parse },
-    } satisfies AiClient,
-    parse,
-  };
+function makeProvider(completeImpl: AiProvider["complete"]) {
+  const complete = vi.fn<AiProvider["complete"]>(completeImpl);
+  return { provider: { complete } satisfies AiProvider, complete };
 }
 
 describe("runMechanicalChecks", () => {
@@ -155,23 +150,24 @@ describe("analyzeContent with ai checks", () => {
       makeCheck({ id: "clarity.frontmatter", measure: { type: "frontmatterValid" } }),
       makeAiCheck("clarity.concrete"),
     ]);
-    const { client, parse } = makeClient(async () => ({
-      parsed_output: {
+    const { provider, complete } = makeProvider(async () => ({
+      output: {
         findings: [{ checkId: "clarity.concrete", score: 50, rationale: "Vague." }],
       },
+      usage: { inputTokens: 42, outputTokens: 7 },
     }));
 
     const result = await analyzeContent("a.md", FILE_CONTENT, {
       tool: "ignored",
       configPath,
-      ai: { client },
+      provider,
     });
 
-    expect(parse).toHaveBeenCalledTimes(1);
-    const request = parse.mock.calls[0]?.[0];
-    const content = String(request?.messages[0]?.content);
-    expect(content).toContain("clarity.concrete");
-    expect(content).toContain("body");
+    expect(complete).toHaveBeenCalledTimes(1);
+    const request = complete.mock.calls[0]?.[0];
+    expect(request?.user).toContain("clarity.concrete");
+    expect(request?.user).toContain("body");
+    expect(result.usage).toEqual({ inputTokens: 42, outputTokens: 7 });
 
     expect(result.report.checkScores).toContainEqual(
       expect.objectContaining({
@@ -197,7 +193,7 @@ describe("analyzeContent with ai checks", () => {
     expect(result.report.aiFindings).toHaveLength(1);
   });
 
-  it("makes no AI call when the ai option is not set", async () => {
+  it("makes no AI call when no provider is set", async () => {
     const { configPath } = tempConfig([
       makeCheck({ id: "clarity.frontmatter", measure: { type: "frontmatterValid" } }),
       makeAiCheck("clarity.concrete"),
@@ -213,13 +209,13 @@ describe("analyzeContent with ai checks", () => {
     expect(result.report.aiFindings).toEqual([]);
   });
 
-  it("prefers pre-computed aiFindings over calling the client", async () => {
+  it("prefers pre-computed aiFindings over calling the provider", async () => {
     const { configPath } = tempConfig([
       makeCheck({ id: "clarity.frontmatter", measure: { type: "frontmatterValid" } }),
       makeAiCheck("clarity.concrete"),
     ]);
-    const { client, parse } = makeClient(async () => ({
-      parsed_output: {
+    const { provider, complete } = makeProvider(async () => ({
+      output: {
         findings: [{ checkId: "clarity.concrete", score: 50, rationale: "Vague." }],
       },
     }));
@@ -228,27 +224,27 @@ describe("analyzeContent with ai checks", () => {
       tool: "ignored",
       configPath,
       aiFindings: [{ checkId: "clarity.concrete", score: 80, rationale: "ok" }],
-      ai: { client },
+      provider,
     });
 
-    expect(parse).not.toHaveBeenCalled();
+    expect(complete).not.toHaveBeenCalled();
     const aiScore = result.report.checkScores.find((c) => c.checkId === "clarity.concrete");
     expect(aiScore?.score).toBe(80);
   });
 
-  it("degrades to mechanical-only scoring when the client throws", async () => {
+  it("degrades to mechanical-only scoring when the provider throws", async () => {
     const { configPath } = tempConfig([
       makeCheck({ id: "clarity.frontmatter", measure: { type: "frontmatterValid" } }),
       makeAiCheck("clarity.concrete"),
     ]);
-    const { client } = makeClient(async () => {
+    const { provider } = makeProvider(async () => {
       throw new Error("401 unauthorized");
     });
 
     const result = await analyzeContent("a.md", FILE_CONTENT, {
       tool: "ignored",
       configPath,
-      ai: { client },
+      provider,
     });
 
     expect(result.aiError).toMatch(/401 unauthorized/);
@@ -268,17 +264,17 @@ describe("analyzeContent with ai checks", () => {
     const { configPath } = tempConfig([
       makeCheck({ id: "clarity.frontmatter", measure: { type: "frontmatterValid" } }),
     ]);
-    const { client, parse } = makeClient(async () => ({
-      parsed_output: { findings: [] },
+    const { provider, complete } = makeProvider(async () => ({
+      output: { findings: [] },
     }));
 
     const result = await analyzeContent("a.md", FILE_CONTENT, {
       tool: "ignored",
       configPath,
-      ai: { client },
+      provider,
     });
 
-    expect(parse).not.toHaveBeenCalled();
+    expect(complete).not.toHaveBeenCalled();
     expect(result.aiError).toBeUndefined();
   });
 });

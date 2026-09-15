@@ -120,4 +120,19 @@ describe("CLI smoke test — boundary invariants", () => {
     expect(result.stdout).not.toContain("Proposed fix:");
     expect(result.stderr).not.toContain("Fix prompt generation skipped");
   });
+
+  it("--show-tokens reports no AI call was made when AI is off (Wave 2)", () => {
+    const result = runCli([
+      "check",
+      resolve(GOLDEN_DIR, "good.instructions.md"),
+      "--tool",
+      "copilot",
+      "--no-ai",
+      "--show-tokens",
+    ]);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("Token usage:");
+    expect(result.stdout).toContain("no AI call was made");
+  });
 });

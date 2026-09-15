@@ -10,7 +10,7 @@
  * Three variants per preset:
  *  (a) mechanical only (no AI findings)
  *  (b) mechanical + a fixed set of AiFinding objects passed in directly
- *  (c) mechanical + the same findings returned by a fake AiClient — proves
+ *  (c) mechanical + the same findings returned by a fake AiProvider — proves
  *      the AI wiring (prompt → parse → validate → merge) reproduces (b)
  *
  * Expected values live in `../testing/golden/expected/*.json`, generated
@@ -23,7 +23,7 @@ import { resolve } from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
 
-import type { AiClient } from "./ai.js";
+import type { AiProvider } from "./ai-provider.js";
 import { analyzeContent } from "./runner.js";
 import type { AiFinding, Report } from "../report.types.js";
 
@@ -132,7 +132,7 @@ describe("golden: pinned scores against the real copilot criteria", () => {
         });
       }
 
-      it("reproduces the pinned balanced+AI report via a fake AiClient", async () => {
+      it("reproduces the pinned balanced+AI report via a fake AiProvider", async () => {
         const expectedEntry = expected.find((e) => e.preset === "balanced" && e.withAi);
         if (!expectedEntry) {
           throw new Error(
@@ -140,18 +140,18 @@ describe("golden: pinned scores against the real copilot criteria", () => {
           );
         }
 
-        const parse = vi.fn<AiClient["messages"]["parse"]>(async () => ({
-          parsed_output: { findings: AI_FINDINGS },
+        const complete = vi.fn<AiProvider["complete"]>(async () => ({
+          output: { findings: AI_FINDINGS },
         }));
-        const client: AiClient = { messages: { parse } };
+        const provider: AiProvider = { complete };
 
         const result = await analyzeContent(fixture.virtualPath, raw, {
           tool: "copilot",
           preset: "balanced",
-          ai: { client },
+          provider,
         });
 
-        expect(parse).toHaveBeenCalledTimes(1);
+        expect(complete).toHaveBeenCalledTimes(1);
         expect(pinned(result.report)).toEqual(expectedPinned(expectedEntry));
       });
     });

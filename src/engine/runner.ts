@@ -11,7 +11,8 @@ import { resolve } from "node:path";
 import { detectFileKind, loadCriteria } from "../config/load.js";
 import type { Check, CriteriaConfig } from "../criteria.types.js";
 import type { AiFinding, Measurement, Report } from "../report.types.js";
-import { runAiChecks, type AiClient } from "./ai.js";
+import { runAiChecks } from "./ai-checks.js";
+import type { AiProvider, TokenUsage } from "./ai-provider.js";
 import { measures } from "./measures.js";
 import { buildReport, resolveCheck } from "./scoring.js";
 import { prepareFile, type FileContext } from "./text.js";
@@ -22,10 +23,10 @@ export interface AnalyzeOptions {
   configPath?: string;
   /** Overrides glob detection — useful for testing and for odd file layouts. */
   fileKind?: string;
-  /** Pre-computed findings (tests, web UI later). When set, no AI call is made. */
+  /** Pre-computed findings (tests, web UI later). When set, no provider call is made. */
   aiFindings?: AiFinding[];
   /** How to reach the model for `mode: "ai"` checks. Omitted → mechanical checks only. */
-  ai?: { apiKey?: string | undefined; client?: AiClient | undefined };
+  provider?: AiProvider | undefined;
 }
 
 export interface AnalyzeResult {
@@ -35,6 +36,8 @@ export interface AnalyzeResult {
   failures: { checkId: string; message: string }[];
   /** Set when the AI call was attempted but produced no usable findings. */
   aiError?: string | undefined;
+  /** Token usage of the bundled AI call, when a provider ran and reported it. */
+  usage?: TokenUsage | undefined;
 }
 
 export async function analyzeFile(
@@ -69,30 +72,30 @@ export async function analyzeContent(
     aiFindings: ai.findings,
   });
 
-  return { report, context, failures, aiError: ai.error };
+  return { report, context, failures, aiError: ai.error, usage: ai.usage };
 }
 
 /**
- * One bundled model call for every pending AI check — or none at all when the
- * caller brought findings along or did not ask for AI checks. The AI layer never
- * throws; a failed call degrades to mechanical-only scoring with a diagnostic.
+ * One bundled provider call for every pending AI check — or none at all when
+ * the caller brought findings along or did not ask for AI checks. The AI
+ * layer never throws; a failed call degrades to mechanical-only scoring
+ * with a diagnostic.
  */
 async function collectAiFindings(
   config: CriteriaConfig,
   ctx: FileContext,
   fileKind: string,
   options: AnalyzeOptions,
-): Promise<{ findings: AiFinding[]; error?: string | undefined }> {
+): Promise<{ findings: AiFinding[]; error?: string | undefined; usage?: TokenUsage | undefined }> {
   if (options.aiFindings) return { findings: options.aiFindings };
-  if (!options.ai) return { findings: [] };
+  if (!options.provider) return { findings: [] };
 
   return runAiChecks({
     checks: pendingAiChecks(config, fileKind),
     fileContent: ctx.raw,
     fileKind,
     tool: config.tool,
-    apiKey: options.ai.apiKey,
-    client: options.ai.client,
+    provider: options.provider,
   });
 }
 
