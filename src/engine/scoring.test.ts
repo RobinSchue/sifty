@@ -195,6 +195,16 @@ describe("buildReport — evidence redaction", () => {
     expect(evidence?.excerpt).not.toContain("AKIAIOSFODNN7EXAMPLE");
     expect(evidence?.excerpt).toContain("AKIA********");
     expect(evidence?.hint).not.toContain("AKIAIOSFODNN7EXAMPLE");
+
+    // report.aiFindings is a second, independent path to the same evidence
+    // (e.g. --format json) — it must be redacted too, not just checkScores.
+    const reportedFinding = report.aiFindings[0]?.evidence?.[0];
+    expect(reportedFinding?.excerpt).not.toContain("AKIAIOSFODNN7EXAMPLE");
+    expect(reportedFinding?.excerpt).toContain("AKIA********");
+    expect(reportedFinding?.hint).not.toContain("AKIAIOSFODNN7EXAMPLE");
+
+    // The original input array passed in by the caller must stay untouched.
+    expect(aiFindings[0]?.evidence?.[0]?.excerpt).toContain("AKIAIOSFODNN7EXAMPLE");
   });
 
   it("leaves evidence untouched when security.redactWith is not set", () => {

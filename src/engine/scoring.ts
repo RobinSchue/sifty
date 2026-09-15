@@ -79,14 +79,29 @@ export function buildReport(args: BuildReportArgs): Report {
     overallScore = args.config.security.blockerCapsOverallAt;
   }
 
+  // checkScores/blockers/fixes all read evidence through `resolved`, already
+  // redacted above — but report.measurements/aiFindings are the raw inputs,
+  // a second, independent path to the same evidence (e.g. the JSON output).
+  // Redact them too, or a secret scrubbed from the fix list would still show
+  // up verbatim right next to it.
+  const patterns = collectRedactionPatterns(args.config);
+  const redactedMeasurements = args.measurements.map((measurement) => ({
+    ...measurement,
+    evidence: redactEvidence(measurement.evidence, patterns),
+  }));
+  const redactedAiFindings = (args.aiFindings ?? []).map((finding) => ({
+    ...finding,
+    evidence: redactEvidence(finding.evidence, patterns),
+  }));
+
   return {
     tool: args.config.tool,
     criteriaVersion: args.config.criteriaVersion,
     file: args.file,
     fileKind: args.fileKind,
     preset,
-    measurements: args.measurements,
-    aiFindings: args.aiFindings ?? [],
+    measurements: redactedMeasurements,
+    aiFindings: redactedAiFindings,
     checkScores: [...resolved.entries()].map(toCheckScore),
     axisScores,
     overallScore,
