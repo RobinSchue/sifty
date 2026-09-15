@@ -145,7 +145,7 @@ export function runMechanicalChecks(
  * preset's weights inside scoring (see scoring.ts computeOverallScore).
  */
 export function validatePreset(config: CriteriaConfig, preset: string): void {
-  if (config.presets[preset]) return;
+  if (Object.hasOwn(config.presets, preset)) return;
   const known = Object.keys(config.presets).sort().join(", ");
   throw new Error(`Unknown preset "${preset}" for tool "${config.tool}". Known presets: ${known}`);
 }

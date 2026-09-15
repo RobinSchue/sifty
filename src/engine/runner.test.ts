@@ -255,6 +255,12 @@ describe("validatePreset", () => {
     const config = makeConfig({ presets: { balanced: makePreset(), cost: makePreset() } });
     expect(() => validatePreset(config, "bogus")).toThrow(/Unknown preset "bogus".*balanced, cost/);
   });
+
+  it("throws for an inherited Object.prototype property name, not just a missing key", () => {
+    const config = makeConfig({ presets: { balanced: makePreset(), cost: makePreset() } });
+    expect(() => validatePreset(config, "toString")).toThrow(/Unknown preset "toString"/);
+    expect(() => validatePreset(config, "constructor")).toThrow(/Unknown preset "constructor"/);
+  });
 });
 
 describe("analyze with an unknown preset", () => {
