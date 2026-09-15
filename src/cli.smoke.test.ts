@@ -135,4 +135,37 @@ describe("CLI smoke test — boundary invariants", () => {
     expect(result.stdout).toContain("Token usage:");
     expect(result.stdout).toContain("no AI call was made");
   });
+
+  it("--format json prints exactly the { report, failures, aiError, usage } contract (Wave 3)", () => {
+    const result = runCli([
+      "check",
+      resolve(GOLDEN_DIR, "good.instructions.md"),
+      "--tool",
+      "copilot",
+      "--no-ai",
+      "--format",
+      "json",
+    ]);
+
+    expect(result.status).toBe(0);
+    const parsed = JSON.parse(result.stdout) as Record<string, unknown>;
+    expect(Object.keys(parsed).sort()).toEqual(["failures", "report"]);
+    expect((parsed["report"] as { overallScore: number }).overallScore).toBe(77);
+  });
+
+  it("--format json exits 1 and reports blockers for a file with a secret", () => {
+    const result = runCli([
+      "check",
+      resolve(GOLDEN_DIR, "blocker.instructions.md"),
+      "--tool",
+      "copilot",
+      "--no-ai",
+      "--format",
+      "json",
+    ]);
+
+    expect(result.status).toBe(1);
+    const parsed = JSON.parse(result.stdout) as { report: { blockers: { checkId: string }[] } };
+    expect(parsed.report.blockers.map((b) => b.checkId)).toContain("security.secrets");
+  });
 });

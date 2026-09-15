@@ -14,11 +14,14 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-import { analyzeContent } from "../../engine/runner.js";
+import { loadCriteria } from "../../criteria/load.js";
+import { measures } from "../../engine/measures.js";
+import { analyze } from "../../engine/runner.js";
 import type { AiFinding } from "../../report.types.js";
 
 const GOLDEN_DIR = resolve(process.cwd(), "src/testing/golden");
 const PRESETS = ["balanced", "cost", "security"];
+const CONFIG = loadCriteria("copilot", undefined, { measureTypes: Object.keys(measures) });
 
 /** Kept in sync with src/engine/golden.test.ts — same fixed findings, same file. */
 const AI_FINDINGS: AiFinding[] = [
@@ -54,11 +57,10 @@ async function main() {
 
     for (const preset of PRESETS) {
       for (const withAi of [false, true]) {
-        const result = await analyzeContent(fixture.virtualPath, raw, {
-          tool: "copilot",
-          preset,
-          ...(withAi ? { aiFindings: AI_FINDINGS } : {}),
-        });
+        const result = await analyze(
+          { path: fixture.virtualPath, content: raw },
+          { config: CONFIG, preset, ...(withAi ? { aiFindings: AI_FINDINGS } : {}) },
+        );
         const report = result.report;
 
         entries.push({

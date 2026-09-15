@@ -13,11 +13,32 @@ import type {
   CriteriaConfig,
   FileKind,
   Grade,
+  Measure,
   PatternDef,
   Preset,
-} from "../criteria.types.js";
+} from "../criteria/types.js";
 
 const ALL_AXES: AxisId[] = ["clarity", "structure", "completeness", "cost", "security"];
+
+/**
+ * Every measure kind the engine implements (mirrors engine/measures.ts's
+ * registry). Kept here, not imported from the engine, so criteria/load.ts
+ * and its tests stay decoupled from src/engine/** — see ValidateCriteriaOptions.
+ */
+export const ALL_MEASURE_TYPES: Measure["type"][] = [
+  "tokenCount",
+  "frontmatterField",
+  "frontmatterValid",
+  "globValidity",
+  "globBreadth",
+  "wordDensity",
+  "patternHits",
+  "markerPresence",
+  "headingStructure",
+  "blockLength",
+  "duplicateLines",
+  "languageGuess",
+];
 
 export function makeAxes(): Axis[] {
   return ALL_AXES.map((id) => ({ id, label: id, description: `${id} axis` }));

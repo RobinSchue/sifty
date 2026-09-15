@@ -37,6 +37,7 @@ sifty check <file> --tool copilot --no-ai
 sifty check <file> --tool copilot --generate-fix-prompt
 sifty check <file> --tool copilot --generate-fix-prompt --fix-prompt full
 sifty check <file> --tool copilot --show-tokens
+sifty check <file> --tool copilot --format json
 ```
 
 The file kind is detected from the path:
@@ -127,6 +128,14 @@ controlled by a preset (`balanced`, `cost`, `security`).
 Findings are redacted before they are printed. A detected key shows up as
 `sk-l********`, so the report itself does not leak what it just flagged.
 
+## JSON output
+
+`--format json` prints exactly `{ report, failures, aiError, usage }` to stdout —
+the same information the terminal report shows, structured for a script, CI, or a
+future web UI to consume instead of parsing formatted text. `aiError` and `usage`
+are omitted when there is nothing to report. `--generate-fix-prompt` and
+`--show-tokens` are ignored in JSON mode; `usage` is already part of the contract.
+
 ## Write instruction files in English
 
 Sifty checks for this and says so. The codebase, the identifiers and the model's own
@@ -161,28 +170,35 @@ The config is validated on load — unknown axes, missing word sets, dangling
 
 ```
 config/
-  copilot.json           criteria: axes, checks, thresholds, word lists
+  copilot.json            criteria: axes, checks, thresholds, word lists
 src/
-  index.ts               CLI entry point
-  criteria.types.ts      schema of a criteria config
-  report.types.ts        schema of a result
-  config/load.ts         loading, validation, file-kind detection
-  engine/text.ts         parses the file once for all measures
-  engine/measures.ts     the mechanical measurements
-  engine/runner.ts       file in, report out
-  engine/scoring.ts      tool-agnostic math
-  engine/ai-provider.ts  the AiProvider port — no SDK import here
-  engine/ai-checks.ts    bundled AI call (via the port), response validation, one retry
-  providers/anthropic.ts the only file that imports @anthropic-ai/sdk
-  fixprompt/generate.ts  AI-driven fix-prompt generation (via the port)
-  reporting/format.ts    Report -> terminal output
+  index.ts                npm bin entry — just imports cli.js
+  cli.ts                  composition root: flags, env, file I/O, printing
+  report.types.ts         schema of a result
+  criteria/types.ts       schema of a criteria config
+  criteria/load.ts        loading, validation, file-kind detection
+  engine/text.ts          parses the file once for all measures
+  engine/measures.ts      the mechanical measurements
+  engine/runner.ts        analyze(): pure, config + content in, report out
+  engine/scoring.ts       tool-agnostic math
+  engine/ai-provider.ts   the AiProvider port — no SDK import here
+  engine/ai-checks.ts     bundled AI call (via the port), response validation, one retry
+  providers/anthropic.ts  the only file that imports @anthropic-ai/sdk
+  fixprompt/generate.ts   AI-driven fix-prompt generation (via the port)
+  reporting/terminal.ts   Report -> terminal output
+  reporting/json.ts       Report -> JSON output (--format json)
 ```
+
+`analyze()` (in `engine/runner.ts`) takes a pre-loaded criteria config and file
+content — no file system, no network, no `process` — so it can be called from
+a script, a test, or eventually a web UI with nothing but plain objects.
+Loading a config from disk and reaching a real model are `cli.ts`'s job.
 
 ## Development
 
 ```bash
 npm install
-npm run dev -- check examples/good.instructions.md --tool copilot
+npm run dev -- check example.instructions.md --tool copilot
 npm run test
 npm run build
 ```

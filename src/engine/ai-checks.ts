@@ -9,7 +9,7 @@
 import { z } from "zod";
 
 import type { AiProvider, TokenUsage } from "./ai-provider.js";
-import type { Check } from "../criteria.types.js";
+import type { Check } from "../criteria/types.js";
 import type { AiFinding, Evidence } from "../report.types.js";
 
 export const aiEvidenceSchema = z.object({

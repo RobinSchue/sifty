@@ -1,11 +1,11 @@
 /**
  * Sifty — report schema.
  *
- * Defined here (not in criteria.types.ts) because the report describes a RUN,
+ * Defined here (not in criteria/types.ts) because the report describes a RUN,
  * not the config.
  */
 
-import type { AxisId } from "./criteria.types.js";
+import type { AxisId } from "./criteria/types.js";
 
 /** A single located observation backing a measurement or finding. */
 export interface Evidence {

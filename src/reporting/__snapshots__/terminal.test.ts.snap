@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`formatReport — golden snapshots > renders blocker (balanced preset, no AI) — snapshot 1`] = `
+exports[`formatTerminal — golden snapshots > renders blocker (balanced preset, no AI) — snapshot 1`] = `
 "
 File: blocker.instructions.md
 Tool: copilot  Kind: scoped  Preset: balanced  Criteria: v0.1.0
@@ -24,7 +24,7 @@ Fix list (by impact):
    3. [info] Replace long code blocks with a minimal example or point to a file in the repo."
 `;
 
-exports[`formatReport — golden snapshots > renders good (balanced preset, no AI) — snapshot 1`] = `
+exports[`formatTerminal — golden snapshots > renders good (balanced preset, no AI) — snapshot 1`] = `
 "
 File: example.instructions.md
 Tool: copilot  Kind: scoped  Preset: balanced  Criteria: v0.1.0
@@ -43,7 +43,7 @@ Fix list (by impact):
    3. [info] State what explicitly must NOT be done — prohibitions often carry more weight than permissions."
 `;
 
-exports[`formatReport — golden snapshots > renders repo-wide (balanced preset, no AI) — snapshot 1`] = `
+exports[`formatTerminal — golden snapshots > renders repo-wide (balanced preset, no AI) — snapshot 1`] = `
 "
 File: .github/copilot-instructions.md
 Tool: copilot  Kind: repo-wide  Preset: balanced  Criteria: v0.1.0

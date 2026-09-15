@@ -14,20 +14,23 @@
  *      the AI wiring (prompt → parse → validate → merge) reproduces (b)
  *
  * Expected values live in `../testing/golden/expected/*.json`, generated
- * from a real `analyzeContent()` run by `../testing/golden/generate.ts`
- * and reviewed by hand, not hand-calculated. Re-run that script and diff
- * the JSON after any deliberate change to scores.
+ * from a real `analyze()` run by `../testing/golden/generate.ts` and
+ * reviewed by hand, not hand-calculated. Re-run that script and diff the
+ * JSON after any deliberate change to scores.
  */
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
 
-import type { AiProvider } from "./ai-provider.js";
-import { analyzeContent } from "./runner.js";
+import { loadCriteria } from "../criteria/load.js";
 import type { AiFinding, Report } from "../report.types.js";
+import type { AiProvider } from "./ai-provider.js";
+import { measures } from "./measures.js";
+import { analyze } from "./runner.js";
 
 const GOLDEN_DIR = resolve(process.cwd(), "src/testing/golden");
+const CONFIG = loadCriteria("copilot", undefined, { measureTypes: Object.keys(measures) });
 
 /** Fixed, synthetic AI findings — same values whether passed directly or via a fake client. */
 const AI_FINDINGS: AiFinding[] = [
@@ -54,7 +57,7 @@ interface Fixture {
   name: string;
   /** File on disk under src/testing/golden/. */
   file: string;
-  /** Path handed to analyzeContent — only used for file-kind detection and report.file. */
+  /** Path handed to analyze() — only used for file-kind detection and report.file. */
   virtualPath: string;
   expectedFile: string;
 }
@@ -122,11 +125,14 @@ describe("golden: pinned scores against the real copilot criteria", () => {
         const label = `preset "${entry.preset}", ${entry.withAi ? "with" : "without"} AI findings`;
 
         it(`matches the pinned report — ${label}`, async () => {
-          const result = await analyzeContent(fixture.virtualPath, raw, {
-            tool: "copilot",
-            preset: entry.preset,
-            ...(entry.withAi ? { aiFindings: AI_FINDINGS } : {}),
-          });
+          const result = await analyze(
+            { path: fixture.virtualPath, content: raw },
+            {
+              config: CONFIG,
+              preset: entry.preset,
+              ...(entry.withAi ? { aiFindings: AI_FINDINGS } : {}),
+            },
+          );
 
           expect(pinned(result.report)).toEqual(expectedPinned(entry));
         });
@@ -145,11 +151,10 @@ describe("golden: pinned scores against the real copilot criteria", () => {
         }));
         const provider: AiProvider = { complete };
 
-        const result = await analyzeContent(fixture.virtualPath, raw, {
-          tool: "copilot",
-          preset: "balanced",
-          provider,
-        });
+        const result = await analyze(
+          { path: fixture.virtualPath, content: raw },
+          { config: CONFIG, preset: "balanced", provider },
+        );
 
         expect(complete).toHaveBeenCalledTimes(1);
         expect(pinned(result.report)).toEqual(expectedPinned(expectedEntry));

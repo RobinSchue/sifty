@@ -1,38 +1,10 @@
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { describe, expect, it, vi } from "vitest";
 
-import { afterEach, describe, expect, it, vi } from "vitest";
-
-import type { AiProvider } from "./ai-provider.js";
-import {
-  analyzeContent,
-  analyzeFile,
-  pendingAiChecks,
-  runMechanicalChecks,
-  validatePreset,
-} from "./runner.js";
-import { prepareFile } from "./text.js";
-import type { Check } from "../criteria.types.js";
+import type { Check } from "../criteria/types.js";
 import { makeCheck, makeConfig, makePreset } from "../testing/fixtures.js";
-
-const tempDirs: string[] = [];
-
-afterEach(() => {
-  for (const dir of tempDirs.splice(0)) {
-    rmSync(dir, { recursive: true, force: true });
-  }
-});
-
-function writeTempTree(configJson: string, fileName: string, fileContent: string) {
-  const dir = mkdtempSync(join(tmpdir(), "sifty-runner-"));
-  tempDirs.push(dir);
-  const configPath = join(dir, "tool.json");
-  writeFileSync(configPath, configJson);
-  const filePath = join(dir, fileName);
-  writeFileSync(filePath, fileContent);
-  return { configPath, filePath };
-}
+import type { AiProvider } from "./ai-provider.js";
+import { analyze, pendingAiChecks, runMechanicalChecks, validatePreset } from "./runner.js";
+import { prepareFile } from "./text.js";
 
 function makeAiCheck(id: string, question = `Question for ${id}?`): Check {
   return {
@@ -119,17 +91,16 @@ describe("runMechanicalChecks", () => {
   });
 });
 
-describe("analyzeContent", () => {
-  it("wires measurements through to real check scores via a temp config file", async () => {
+describe("analyze", () => {
+  it("wires measurements through to real check scores from a config object", async () => {
     const config = makeConfig({
       checks: [makeCheck({ id: "clarity.frontmatter", measure: { type: "frontmatterValid" } })],
     });
-    const { configPath } = writeTempTree(JSON.stringify(config), "a.instructions.md", "irrelevant");
 
-    const result = await analyzeContent("a.md", "---\napplyTo: '**'\n---\nbody\n", {
-      tool: "ignored",
-      configPath,
-    });
+    const result = await analyze(
+      { path: "a.instructions.md", content: "---\napplyTo: '**'\n---\nbody\n" },
+      { config },
+    );
 
     expect(result.report.checkScores).toHaveLength(1);
     expect(result.report.checkScores[0]?.score).toBe(100);
@@ -137,16 +108,15 @@ describe("analyzeContent", () => {
   });
 });
 
-describe("analyzeContent with ai checks", () => {
+describe("analyze with ai checks", () => {
   const FILE_CONTENT = "---\napplyTo: '**'\n---\nbody\n";
 
-  function tempConfig(checks: Check[]) {
-    const config = makeConfig({ checks });
-    return writeTempTree(JSON.stringify(config), "a.instructions.md", "irrelevant");
+  function configWith(checks: Check[]) {
+    return makeConfig({ checks });
   }
 
   it("merges mechanical and AI scores into one report", async () => {
-    const { configPath } = tempConfig([
+    const config = configWith([
       makeCheck({ id: "clarity.frontmatter", measure: { type: "frontmatterValid" } }),
       makeAiCheck("clarity.concrete"),
     ]);
@@ -157,11 +127,10 @@ describe("analyzeContent with ai checks", () => {
       usage: { inputTokens: 42, outputTokens: 7 },
     }));
 
-    const result = await analyzeContent("a.md", FILE_CONTENT, {
-      tool: "ignored",
-      configPath,
-      provider,
-    });
+    const result = await analyze(
+      { path: "a.instructions.md", content: FILE_CONTENT },
+      { config, provider },
+    );
 
     expect(complete).toHaveBeenCalledTimes(1);
     const request = complete.mock.calls[0]?.[0];
@@ -194,15 +163,12 @@ describe("analyzeContent with ai checks", () => {
   });
 
   it("makes no AI call when no provider is set", async () => {
-    const { configPath } = tempConfig([
+    const config = configWith([
       makeCheck({ id: "clarity.frontmatter", measure: { type: "frontmatterValid" } }),
       makeAiCheck("clarity.concrete"),
     ]);
 
-    const result = await analyzeContent("a.md", FILE_CONTENT, {
-      tool: "ignored",
-      configPath,
-    });
+    const result = await analyze({ path: "a.instructions.md", content: FILE_CONTENT }, { config });
 
     const aiScore = result.report.checkScores.find((c) => c.checkId === "clarity.concrete");
     expect(aiScore?.applicable).toBe(false);
@@ -210,7 +176,7 @@ describe("analyzeContent with ai checks", () => {
   });
 
   it("prefers pre-computed aiFindings over calling the provider", async () => {
-    const { configPath } = tempConfig([
+    const config = configWith([
       makeCheck({ id: "clarity.frontmatter", measure: { type: "frontmatterValid" } }),
       makeAiCheck("clarity.concrete"),
     ]);
@@ -220,12 +186,14 @@ describe("analyzeContent with ai checks", () => {
       },
     }));
 
-    const result = await analyzeContent("a.md", FILE_CONTENT, {
-      tool: "ignored",
-      configPath,
-      aiFindings: [{ checkId: "clarity.concrete", score: 80, rationale: "ok" }],
-      provider,
-    });
+    const result = await analyze(
+      { path: "a.instructions.md", content: FILE_CONTENT },
+      {
+        config,
+        aiFindings: [{ checkId: "clarity.concrete", score: 80, rationale: "ok" }],
+        provider,
+      },
+    );
 
     expect(complete).not.toHaveBeenCalled();
     const aiScore = result.report.checkScores.find((c) => c.checkId === "clarity.concrete");
@@ -233,7 +201,7 @@ describe("analyzeContent with ai checks", () => {
   });
 
   it("degrades to mechanical-only scoring when the provider throws", async () => {
-    const { configPath } = tempConfig([
+    const config = configWith([
       makeCheck({ id: "clarity.frontmatter", measure: { type: "frontmatterValid" } }),
       makeAiCheck("clarity.concrete"),
     ]);
@@ -241,11 +209,10 @@ describe("analyzeContent with ai checks", () => {
       throw new Error("401 unauthorized");
     });
 
-    const result = await analyzeContent("a.md", FILE_CONTENT, {
-      tool: "ignored",
-      configPath,
-      provider,
-    });
+    const result = await analyze(
+      { path: "a.instructions.md", content: FILE_CONTENT },
+      { config, provider },
+    );
 
     expect(result.aiError).toMatch(/401 unauthorized/);
     expect(result.report.checkScores).toContainEqual(
@@ -261,39 +228,20 @@ describe("analyzeContent with ai checks", () => {
   });
 
   it("makes no AI call when the config has no ai-mode checks", async () => {
-    const { configPath } = tempConfig([
+    const config = configWith([
       makeCheck({ id: "clarity.frontmatter", measure: { type: "frontmatterValid" } }),
     ]);
     const { provider, complete } = makeProvider(async () => ({
       output: { findings: [] },
     }));
 
-    const result = await analyzeContent("a.md", FILE_CONTENT, {
-      tool: "ignored",
-      configPath,
-      provider,
-    });
+    const result = await analyze(
+      { path: "a.instructions.md", content: FILE_CONTENT },
+      { config, provider },
+    );
 
     expect(complete).not.toHaveBeenCalled();
     expect(result.aiError).toBeUndefined();
-  });
-});
-
-describe("analyzeFile", () => {
-  it("reads the file from disk and analyzes it", async () => {
-    const config = makeConfig({
-      checks: [makeCheck({ id: "clarity.frontmatter", measure: { type: "frontmatterValid" } })],
-    });
-    const { configPath, filePath } = writeTempTree(
-      JSON.stringify(config),
-      "a.instructions.md",
-      "---\napplyTo: '**'\n---\nbody\n",
-    );
-
-    const result = await analyzeFile(filePath, { tool: "ignored", configPath });
-
-    expect(result.report.file).toBe(filePath);
-    expect(result.report.checkScores[0]?.score).toBe(100);
   });
 });
 
@@ -309,19 +257,17 @@ describe("validatePreset", () => {
   });
 });
 
-describe("analyzeContent with an unknown preset", () => {
+describe("analyze with an unknown preset", () => {
   it("rejects the run instead of silently scoring with the default preset's weights", async () => {
     const config = makeConfig({
       checks: [makeCheck({ id: "clarity.frontmatter", measure: { type: "frontmatterValid" } })],
     });
-    const { configPath } = writeTempTree(JSON.stringify(config), "a.instructions.md", "irrelevant");
 
     await expect(
-      analyzeContent("a.md", "---\napplyTo: '**'\n---\nbody\n", {
-        tool: "ignored",
-        configPath,
-        preset: "bogus",
-      }),
+      analyze(
+        { path: "a.instructions.md", content: "---\napplyTo: '**'\n---\nbody\n" },
+        { config, preset: "bogus" },
+      ),
     ).rejects.toThrow(/Unknown preset "bogus"/);
   });
 });

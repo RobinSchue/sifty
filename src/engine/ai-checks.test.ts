@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { AiProvider } from "./ai-provider.js";
 import { buildAiRequest, runAiChecks } from "./ai-checks.js";
-import type { Check } from "../criteria.types.js";
+import type { Check } from "../criteria/types.js";
 
 function makeAiCheck(id: string, question = `Question for ${id}?`): Check {
   return {

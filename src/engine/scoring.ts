@@ -8,7 +8,7 @@
  */
 
 import { redactEvidence } from "./text.js";
-import type { Check, CriteriaConfig, PatternDef, Scoring } from "../criteria.types.js";
+import type { Check, CriteriaConfig, PatternDef, Scoring } from "../criteria/types.js";
 import type {
   AiFinding,
   AxisScore,

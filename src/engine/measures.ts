@@ -5,12 +5,12 @@
  * They only MEASURE — turning a value into a score is the engine's job.
  *
  * The registry is typed as Record<Measure["type"], MeasureFn>: add a new type
- * to the union in criteria.types.ts and TypeScript demands the implementation here.
+ * to the union in criteria/types.ts and TypeScript demands the implementation here.
  */
 
 import picomatch from "picomatch";
 
-import type { CriteriaConfig, Measure, PatternDef } from "../criteria.types.js";
+import type { CriteriaConfig, Measure, PatternDef } from "../criteria/types.js";
 import type { Evidence } from "../report.types.js";
 import {
   codeFenceBlocks,

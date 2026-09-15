@@ -7,7 +7,7 @@
 
 import matter from "gray-matter";
 
-import type { PatternDef } from "../criteria.types.js";
+import type { PatternDef } from "../criteria/types.js";
 import type { Evidence } from "../report.types.js";
 
 export interface Block {

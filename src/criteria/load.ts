@@ -1,8 +1,14 @@
 /**
- * Sifty — config loader.
+ * Sifty — criteria loader.
  *
  * Finds config/<tool>.json, parses it and validates it enough that a typo
  * fails loudly at startup instead of silently producing an empty axis.
+ *
+ * Does NOT import the engine: `measureTypes` — which measure kinds are
+ * actually implemented — is supplied by the caller (the composition root,
+ * which already knows the engine) instead of imported here. That keeps the
+ * dependency direction one-way: engine depends on criteria, never the
+ * reverse (enforced by eslint.config.js).
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -11,14 +17,18 @@ import { fileURLToPath } from "node:url";
 
 import picomatch from "picomatch";
 
-import type { CriteriaConfig } from "../criteria.types.js";
-import { measures } from "../engine/measures.js";
+import type { CriteriaConfig } from "./types.js";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
+export interface ValidateCriteriaOptions {
+  /** Measure type ids the engine actually implements — see engine/measures.js's registry. */
+  measureTypes: string[];
+}
+
 /**
- * Works in dev (src/config/) and after a build (dist/config/), and does NOT
- * depend on the current working directory — the CLI is run from anywhere.
+ * Works in dev (src/criteria/) and after a build (dist/criteria/), and does
+ * NOT depend on the current working directory — the CLI is run from anywhere.
  */
 export function findConfigDir(): string {
   const candidates = [
@@ -33,7 +43,11 @@ export function findConfigDir(): string {
   return found;
 }
 
-export function loadCriteria(tool: string, configPath?: string): CriteriaConfig {
+export function loadCriteria(
+  tool: string,
+  configPath: string | undefined,
+  options: ValidateCriteriaOptions,
+): CriteriaConfig {
   const path = configPath
     ? isAbsolute(configPath)
       ? configPath
@@ -55,7 +69,7 @@ export function loadCriteria(tool: string, configPath?: string): CriteriaConfig 
   }
 
   const config = parsed as CriteriaConfig;
-  validateCriteria(config, path);
+  validateCriteria(config, path, options);
   return config;
 }
 
@@ -63,7 +77,11 @@ export function loadCriteria(tool: string, configPath?: string): CriteriaConfig 
  * Deliberately hand-written for now. Once the config grows, replace this with
  * a zod schema — the checks below are exactly what zod would generate.
  */
-export function validateCriteria(config: CriteriaConfig, source: string): void {
+export function validateCriteria(
+  config: CriteriaConfig,
+  source: string,
+  options: ValidateCriteriaOptions,
+): void {
   const problems: string[] = [];
   const fail = (message: string) => problems.push(message);
 
@@ -107,7 +125,7 @@ export function validateCriteria(config: CriteriaConfig, source: string): void {
     if (check.mode === "mechanical") {
       if (!check.measure) {
         fail(`mechanical check "${check.id}" has no measure`);
-      } else if (!(check.measure.type in measures)) {
+      } else if (!options.measureTypes.includes(check.measure.type)) {
         fail(`check "${check.id}" uses unimplemented measure "${check.measure.type}"`);
       }
       validateSetReferences(config, check.id, check.measure?.params, fail);

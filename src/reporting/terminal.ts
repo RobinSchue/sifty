@@ -2,7 +2,8 @@
  * Sifty — terminal report formatting.
  *
  * One function, one job: turn a `Report` into the string the CLI prints.
- * Kept separate from `src/index.ts` so the CLI stays composition-only.
+ * Kept separate from `src/cli.ts` so the CLI stays composition-only. See
+ * `json.ts` for the other supported `--format`.
  */
 
 import chalk from "chalk";
@@ -11,7 +12,7 @@ import type { Evidence, Report } from "../report.types.js";
 
 const BAR_WIDTH = 20;
 
-export function formatReport(report: Report): string {
+export function formatTerminal(report: Report): string {
   const lines: string[] = [];
 
   lines.push(chalk.bold(`\nFile: ${report.file}`));
