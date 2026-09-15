@@ -68,7 +68,11 @@ export async function generateFixPrompt(args: GenerateFixPromptArgs): Promise<{
       };
     }
 
-    return { short: parsed.data.short, full: parsed.data.full, usage: response.usage };
+    return {
+      short: parsed.data.short,
+      full: appendFileContent(parsed.data.full, args.fileContent),
+      usage: response.usage,
+    };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     return { short: "", full: "", error: `Fix prompt generation failed: ${message}` };
@@ -82,17 +86,23 @@ function buildFixPromptRequest(args: GenerateFixPromptArgs): string {
 
   return [
     `File: ${args.fileKind} (${args.tool})`,
-    // Full content, not a truncated excerpt — the "full" style below is documented
-    // to include the whole file, and a prompt for Claude/ChatGPT that quotes only
-    // an excerpt would generate fixes for text the model never saw.
+    // Full content, not a truncated excerpt — the model needs to see the whole
+    // file to write a well-grounded ask, even though it must not echo it back
+    // (see the "full" instruction below: maxTokens bounds the RESPONSE, and a
+    // large file would not fit in it — the caller appends the file separately).
     `Content:\n\`\`\`\n${args.fileContent}\n\`\`\``,
     "Found issues (ranked by impact):",
     fixList,
     "",
     "Generate two prompts:",
     '1. "short": A brief 1-2 sentence suggestion: "Here are the issues: [...]. Please fix them."',
-    '2. "full": A complete, ready-to-use prompt for Claude/ChatGPT that includes the full file content and a detailed ask to improve it.',
+    '2. "full": A detailed, ready-to-use ask for Claude/ChatGPT describing the issues and how to fix them. Do NOT include, quote, or repeat the file content — it is appended separately by the caller.',
     "",
     'Return only valid JSON matching: {"short": "...", "full": "..."}',
   ].join("\n");
+}
+
+/** The model writes the ask only (see buildFixPromptRequest) — the file content, whatever its size, is appended here, outside the response's maxTokens budget. */
+function appendFileContent(ask: string, fileContent: string): string {
+  return [ask, "", "File content:", "```", fileContent, "```"].join("\n");
 }

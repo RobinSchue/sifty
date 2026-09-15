@@ -84,6 +84,31 @@ describe("generateFixPrompt", () => {
     expect(request?.user).not.toContain("...\n```");
   });
 
+  it("returns the complete file in 'full' even for content far larger than the response's maxTokens budget", async () => {
+    // Several times larger than MAX_TOKENS (2048) could ever hold if the
+    // model had to echo it back — the model isn't asked to, so this must
+    // not depend on maxTokens at all.
+    const hugeContent = `# Title\n${"word ".repeat(20_000)}`;
+    expect(hugeContent.length).toBeGreaterThan(50_000);
+
+    const { provider } = makeProvider(async () => ({
+      // The model returns only a short ask — no file content in its response,
+      // which is the whole point: it physically couldn't fit hugeContent here.
+      output: { short: "s", full: "Rewrite the intro and add examples." },
+    }));
+
+    const { full } = await generateFixPrompt({
+      report: { fixes: [{ text: "Fix this", impact: 10 }] },
+      fileContent: hugeContent,
+      fileKind: "scoped",
+      tool: "copilot",
+      provider,
+    });
+
+    expect(full).toContain(hugeContent);
+    expect(full).toContain("Rewrite the intro and add examples.");
+  });
+
   it("sends no system prompt (preserves the original request shape)", async () => {
     const { provider, complete } = makeProvider(async () => ({
       output: { short: "s", full: "f" },
