@@ -204,9 +204,11 @@ npm run test
 npm run build
 ```
 
-Working in this repo — including with an AI agent — see `AGENTS.md` (language,
-commits, the golden safety net) and `docs/architecture/` (glossary, context map,
-dependency rules, and the ADRs in `docs/adr/` for why past decisions were made).
+Working in this repo — including with an AI agent — start with
+`ARCHITECTURE.md` (the four decisions the code is built on and why), then
+`AGENTS.md` (language, commits, the golden safety net) and `docs/architecture/`
+(glossary, context map, dependency rules, and the ADRs in `docs/adr/` for why
+past decisions were made).
 
 Adding a check usually means editing `config/copilot.json` only. A new _kind_ of
 measurement means adding the type to `Measure` in `criteria/types.ts` — TypeScript

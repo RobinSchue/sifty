@@ -76,6 +76,7 @@ against the REAL `config/copilot.json`. Before changing
 
 | File                                    | Content                                             |
 | --------------------------------------- | --------------------------------------------------- |
+| `ARCHITECTURE.md`                       | Why the code is shaped this way — read this first   |
 | `docs/architecture/glossary.md`         | One term per concept                                |
 | `docs/architecture/context-map.md`      | Module responsibilities, mermaid diagram            |
 | `docs/architecture/dependency-rules.md` | What ESLint enforces, and how it was verified       |
