@@ -1,0 +1,299 @@
+[
+  {
+    "preset": "balanced",
+    "withAi": false,
+    "overallScore": 40,
+    "cappedFrom": 90,
+    "grade": {
+      "label": "critical",
+      "color": "red"
+    },
+    "axisScores": [
+      {
+        "axis": "clarity",
+        "score": 100,
+        "checkCount": 3,
+        "totalChecks": 5
+      },
+      {
+        "axis": "structure",
+        "score": 100,
+        "checkCount": 6,
+        "totalChecks": 6
+      },
+      {
+        "axis": "completeness",
+        "score": 100,
+        "checkCount": 2,
+        "totalChecks": 5
+      },
+      {
+        "axis": "cost",
+        "score": 98,
+        "checkCount": 4,
+        "totalChecks": 4
+      },
+      {
+        "axis": "security",
+        "score": 50,
+        "checkCount": 4,
+        "totalChecks": 4
+      }
+    ],
+    "blockers": ["security.secrets", "security.internal-hosts"],
+    "fixes": ["security.secrets", "security.internal-hosts", "cost.no-inline-bulk"],
+    "fileKind": "scoped"
+  },
+  {
+    "preset": "balanced",
+    "withAi": true,
+    "overallScore": 40,
+    "cappedFrom": 84,
+    "grade": {
+      "label": "critical",
+      "color": "red"
+    },
+    "axisScores": [
+      {
+        "axis": "clarity",
+        "score": 90,
+        "checkCount": 5,
+        "totalChecks": 5
+      },
+      {
+        "axis": "structure",
+        "score": 100,
+        "checkCount": 6,
+        "totalChecks": 6
+      },
+      {
+        "axis": "completeness",
+        "score": 83,
+        "checkCount": 5,
+        "totalChecks": 5
+      },
+      {
+        "axis": "cost",
+        "score": 98,
+        "checkCount": 4,
+        "totalChecks": 4
+      },
+      {
+        "axis": "security",
+        "score": 50,
+        "checkCount": 4,
+        "totalChecks": 4
+      }
+    ],
+    "blockers": ["security.secrets", "security.internal-hosts"],
+    "fixes": [
+      "security.secrets",
+      "security.internal-hosts",
+      "completeness.project-context",
+      "clarity.concrete-instructions",
+      "completeness.output-constraint-sensible",
+      "completeness.scope-statement",
+      "clarity.contradictions",
+      "cost.no-inline-bulk"
+    ],
+    "fileKind": "scoped"
+  },
+  {
+    "preset": "cost",
+    "withAi": false,
+    "overallScore": 40,
+    "cappedFrom": 92,
+    "grade": {
+      "label": "critical",
+      "color": "red"
+    },
+    "axisScores": [
+      {
+        "axis": "clarity",
+        "score": 100,
+        "checkCount": 3,
+        "totalChecks": 5
+      },
+      {
+        "axis": "structure",
+        "score": 100,
+        "checkCount": 6,
+        "totalChecks": 6
+      },
+      {
+        "axis": "completeness",
+        "score": 100,
+        "checkCount": 2,
+        "totalChecks": 5
+      },
+      {
+        "axis": "cost",
+        "score": 98,
+        "checkCount": 4,
+        "totalChecks": 4
+      },
+      {
+        "axis": "security",
+        "score": 50,
+        "checkCount": 4,
+        "totalChecks": 4
+      }
+    ],
+    "blockers": ["security.secrets", "security.internal-hosts"],
+    "fixes": ["security.secrets", "security.internal-hosts", "cost.no-inline-bulk"],
+    "fileKind": "scoped"
+  },
+  {
+    "preset": "cost",
+    "withAi": true,
+    "overallScore": 40,
+    "cappedFrom": 88,
+    "grade": {
+      "label": "critical",
+      "color": "red"
+    },
+    "axisScores": [
+      {
+        "axis": "clarity",
+        "score": 90,
+        "checkCount": 5,
+        "totalChecks": 5
+      },
+      {
+        "axis": "structure",
+        "score": 100,
+        "checkCount": 6,
+        "totalChecks": 6
+      },
+      {
+        "axis": "completeness",
+        "score": 83,
+        "checkCount": 5,
+        "totalChecks": 5
+      },
+      {
+        "axis": "cost",
+        "score": 98,
+        "checkCount": 4,
+        "totalChecks": 4
+      },
+      {
+        "axis": "security",
+        "score": 50,
+        "checkCount": 4,
+        "totalChecks": 4
+      }
+    ],
+    "blockers": ["security.secrets", "security.internal-hosts"],
+    "fixes": [
+      "security.secrets",
+      "security.internal-hosts",
+      "completeness.project-context",
+      "clarity.concrete-instructions",
+      "completeness.output-constraint-sensible",
+      "completeness.scope-statement",
+      "clarity.contradictions",
+      "cost.no-inline-bulk"
+    ],
+    "fileKind": "scoped"
+  },
+  {
+    "preset": "security",
+    "withAi": false,
+    "overallScore": 40,
+    "cappedFrom": 78,
+    "grade": {
+      "label": "critical",
+      "color": "red"
+    },
+    "axisScores": [
+      {
+        "axis": "clarity",
+        "score": 100,
+        "checkCount": 3,
+        "totalChecks": 5
+      },
+      {
+        "axis": "structure",
+        "score": 100,
+        "checkCount": 6,
+        "totalChecks": 6
+      },
+      {
+        "axis": "completeness",
+        "score": 100,
+        "checkCount": 2,
+        "totalChecks": 5
+      },
+      {
+        "axis": "cost",
+        "score": 98,
+        "checkCount": 4,
+        "totalChecks": 4
+      },
+      {
+        "axis": "security",
+        "score": 50,
+        "checkCount": 4,
+        "totalChecks": 4
+      }
+    ],
+    "blockers": ["security.secrets", "security.internal-hosts"],
+    "fixes": ["security.secrets", "security.internal-hosts", "cost.no-inline-bulk"],
+    "fileKind": "scoped"
+  },
+  {
+    "preset": "security",
+    "withAi": true,
+    "overallScore": 40,
+    "cappedFrom": 74,
+    "grade": {
+      "label": "critical",
+      "color": "red"
+    },
+    "axisScores": [
+      {
+        "axis": "clarity",
+        "score": 90,
+        "checkCount": 5,
+        "totalChecks": 5
+      },
+      {
+        "axis": "structure",
+        "score": 100,
+        "checkCount": 6,
+        "totalChecks": 6
+      },
+      {
+        "axis": "completeness",
+        "score": 83,
+        "checkCount": 5,
+        "totalChecks": 5
+      },
+      {
+        "axis": "cost",
+        "score": 98,
+        "checkCount": 4,
+        "totalChecks": 4
+      },
+      {
+        "axis": "security",
+        "score": 50,
+        "checkCount": 4,
+        "totalChecks": 4
+      }
+    ],
+    "blockers": ["security.secrets", "security.internal-hosts"],
+    "fixes": [
+      "security.secrets",
+      "security.internal-hosts",
+      "completeness.project-context",
+      "clarity.concrete-instructions",
+      "completeness.output-constraint-sensible",
+      "completeness.scope-statement",
+      "clarity.contradictions",
+      "cost.no-inline-bulk"
+    ],
+    "fileKind": "scoped"
+  }
+]

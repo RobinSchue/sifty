@@ -1,6 +1,10 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
 import chalk from "chalk";
 import { beforeAll, describe, expect, it } from "vitest";
 
+import { analyzeContent } from "../engine/runner.js";
 import type { Report } from "../report.types.js";
 import { formatReport } from "./format.js";
 
@@ -147,4 +151,36 @@ describe("formatReport", () => {
     const output = formatReport(baseReport({ fixes: [] }));
     expect(output).toContain("No fixes needed");
   });
+});
+
+/**
+ * Golden terminal snapshots (part of the Wave 0 safety net, see
+ * src/engine/golden.test.ts). Same three fixtures, real config/copilot.json,
+ * mechanical-only (deterministic, no AI call) — pins the exact text a user
+ * sees, not just the underlying numbers.
+ */
+describe("formatReport — golden snapshots", () => {
+  const GOLDEN_DIR = resolve(process.cwd(), "src/testing/golden");
+
+  const fixtures: { name: string; file: string; virtualPath: string }[] = [
+    { name: "good", file: "good.instructions.md", virtualPath: "example.instructions.md" },
+    {
+      name: "repo-wide",
+      file: "repo-wide.copilot-instructions.md",
+      virtualPath: ".github/copilot-instructions.md",
+    },
+    { name: "blocker", file: "blocker.instructions.md", virtualPath: "blocker.instructions.md" },
+  ];
+
+  for (const fixture of fixtures) {
+    it(`renders ${fixture.name} (balanced preset, no AI) — snapshot`, async () => {
+      const raw = readFileSync(resolve(GOLDEN_DIR, fixture.file), "utf8");
+      const result = await analyzeContent(fixture.virtualPath, raw, {
+        tool: "copilot",
+        preset: "balanced",
+      });
+
+      expect(formatReport(result.report)).toMatchSnapshot();
+    });
+  }
 });

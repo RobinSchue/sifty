@@ -1,0 +1,62 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`formatReport — golden snapshots > renders blocker (balanced preset, no AI) — snapshot 1`] = `
+"
+File: blocker.instructions.md
+Tool: copilot  Kind: scoped  Preset: balanced  Criteria: v0.1.0
+
+ BLOCKER  Secrets in plain text
+   line 17 — "ging key: AKIA************ ## Context The staging dash" — AWS access key id
+ BLOCKER  Internal hosts and addresses
+   line 21 — "lives at inte*********.local and is only reachable from the" — Internal hostname
+
+Overall score: 40/100 — critical (capped from 90)
+
+  Clarity & Precision  ████████████████████ 100 (3/5 checks)
+  Structure & Format   ████████████████████ 100
+  Completeness         ████████████████████ 100 (2/5 checks)
+  Cost Efficiency      ████████████████████  98
+  Security             ██████████░░░░░░░░░░  50
+
+Fix list (by impact):
+   1.  blocker  Remove the secret immediately, purge it from git history and rotate it. Reference an environment variable instead of the value.
+   2.  blocker  Replace internal hostnames with placeholders — otherwise they reach the AI provider on every call.
+   3. [info] Replace long code blocks with a minimal example or point to a file in the repo."
+`;
+
+exports[`formatReport — golden snapshots > renders good (balanced preset, no AI) — snapshot 1`] = `
+"
+File: example.instructions.md
+Tool: copilot  Kind: scoped  Preset: balanced  Criteria: v0.1.0
+
+Overall score: 77/100 — solid
+
+  Clarity & Precision  ████████████████████ 100 (3/5 checks)
+  Structure & Format   ████████████████████ 100
+  Completeness         ███░░░░░░░░░░░░░░░░░  16 (2/5 checks)
+  Cost Efficiency      ██████████████░░░░░░  70
+  Security             ████████████████████ 100
+
+Fix list (by impact):
+   1. [info] Add at least one short example — ideally a contrasting pair (do this / not this).
+   2. [info] Add a constraint on response length or shape (e.g. "changed code only, no explanation"). Output tokens cost a multiple of input tokens.
+   3. [info] State what explicitly must NOT be done — prohibitions often carry more weight than permissions."
+`;
+
+exports[`formatReport — golden snapshots > renders repo-wide (balanced preset, no AI) — snapshot 1`] = `
+"
+File: .github/copilot-instructions.md
+Tool: copilot  Kind: repo-wide  Preset: balanced  Criteria: v0.1.0
+
+Overall score: 86/100 — strong
+
+  Clarity & Precision  ████████████████████ 100 (3/5 checks)
+  Structure & Format   ████████████████████ 100
+  Completeness         ████████░░░░░░░░░░░░  40 (2/5 checks)
+  Cost Efficiency      ██████████████████░░  92
+  Security             ████████████████████ 100
+
+Fix list (by impact):
+   1. [info] Add at least one short example — ideally a contrasting pair (do this / not this).
+   2. [info] This file ships with every request. Anything that does not always apply belongs in a scoped file with applyTo."
+`;
