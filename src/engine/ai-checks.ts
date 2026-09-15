@@ -118,7 +118,7 @@ export async function runAiChecks(args: RunAiChecksArgs): Promise<{
   }
 
   let retryReason: string | undefined;
-  let lastUsage: TokenUsage | undefined;
+  let totalUsage: TokenUsage | undefined;
 
   for (let attempt = 0; attempt < 2; attempt++) {
     const request = buildAiRequest({
@@ -130,10 +130,15 @@ export async function runAiChecks(args: RunAiChecksArgs): Promise<{
     });
 
     const response = await requestFindings(args.provider, request);
-    if (response.usage) lastUsage = response.usage;
+    if (response.usage) {
+      totalUsage = {
+        inputTokens: (totalUsage?.inputTokens ?? 0) + response.usage.inputTokens,
+        outputTokens: (totalUsage?.outputTokens ?? 0) + response.usage.outputTokens,
+      };
+    }
 
     if (response.kind === "api-error") {
-      return { findings: [], error: `AI checks failed: ${response.message}`, usage: lastUsage };
+      return { findings: [], error: `AI checks failed: ${response.message}`, usage: totalUsage };
     }
 
     if (response.kind === "invalid") {
@@ -144,7 +149,7 @@ export async function runAiChecks(args: RunAiChecksArgs): Promise<{
       return {
         findings: [],
         error: `AI response was invalid after one retry: ${response.message}`,
-        usage: lastUsage,
+        usage: totalUsage,
       };
     }
 
@@ -157,14 +162,14 @@ export async function runAiChecks(args: RunAiChecksArgs): Promise<{
       return {
         findings: [],
         error: `AI response was incomplete after one retry: missing ${selected.missingIds.join(", ")}.`,
-        usage: lastUsage,
+        usage: totalUsage,
       };
     }
 
-    return { findings: selected.findings, usage: lastUsage };
+    return { findings: selected.findings, usage: totalUsage };
   }
 
-  return { findings: [], error: "AI response was invalid after one retry.", usage: lastUsage };
+  return { findings: [], error: "AI response was invalid after one retry.", usage: totalUsage };
 }
 
 type RequestFindingsResult = (

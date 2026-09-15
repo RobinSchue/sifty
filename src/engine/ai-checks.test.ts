@@ -133,13 +133,17 @@ describe("runAiChecks", () => {
     expect(complete).toHaveBeenCalledTimes(1);
   });
 
-  it("retries once when the first structured response is malformed", async () => {
+  it("retries once when the first structured response is malformed, summing usage across both attempts", async () => {
     const checks = [makeAiCheck("clarity.tone")];
     const completeImpl = vi
       .fn<AiProvider["complete"]>()
-      .mockResolvedValueOnce({ output: { nope: true } })
+      .mockResolvedValueOnce({
+        output: { nope: true },
+        usage: { inputTokens: 200, outputTokens: 40 },
+      })
       .mockResolvedValueOnce({
         output: { findings: [{ checkId: "clarity.tone", score: 77, rationale: "Solid." }] },
+        usage: { inputTokens: 220, outputTokens: 60 },
       });
     const { provider, complete } = makeProvider(completeImpl);
 
@@ -155,6 +159,7 @@ describe("runAiChecks", () => {
       { checkId: "clarity.tone", score: 77, rationale: "Solid.", evidence: undefined },
     ]);
     expect(complete).toHaveBeenCalledTimes(2);
+    expect(result.usage).toEqual({ inputTokens: 420, outputTokens: 100 });
   });
 
   it("returns an error when both structured responses are invalid", async () => {
