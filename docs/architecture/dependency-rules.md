@@ -31,6 +31,7 @@ loads the real criteria file and the real engine together on purpose).
 
 ## What CI covers
 
-`.github/workflows/ci.yml` runs, on every push and PR: `npm run typecheck`,
-`npm run lint` (including every rule above), `npm run format:check`,
-`npm test` (including the golden safety net), `npm run build`.
+`.github/workflows/ci.yml` runs, on every pull request and every push to
+`main`: `npm run typecheck`, `npm run lint` (including every rule above),
+`npm run format:check`, `npm test` (including the golden safety net),
+`npm run build`.
