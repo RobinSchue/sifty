@@ -1,0 +1,497 @@
+/**
+ * Sifty — Zod schema for criteria configurations.
+ *
+ * Structural validation (types, ranges, enums) PLUS the cross-field business
+ * rules that used to live as hand-written `fail(...)` calls in load.ts:
+ * axis/fileKind/preset/check-id/requires/redactWith references, band
+ * ordering, and the override constraints below. `loadCriteria()` runs this
+ * once at startup — a typo fails loudly there, never silently inside a score.
+ *
+ * `types.ts` stays hand-written rather than `z.infer`-derived: `Check` is
+ * self-referential (`overrides: Record<string, Partial<Check>>`), and Zod's
+ * own recursive-schema pattern (`z.lazy`) needs a TS type to anchor itself
+ * to — inferring that same type FROM the lazy schema is circular. Instead,
+ * every schema below is annotated `z.ZodType<X>` against the type in
+ * types.ts: if the two drift, this file fails to compile, which is the
+ * property we actually want (one struct, checked two ways, never silently
+ * out of sync) without fighting Zod's inference for a shape it can't infer
+ * cleanly anyway.
+ *
+ * NOT checked here: `check.measure.type` against the engine's actual
+ * implementations — that needs `measureTypes`, external runtime data the
+ * composition root supplies (see load.ts's separate, small pass for it) —
+ * keeping this schema itself free of any engine dependency (criteria must
+ * not import the engine — see eslint.config.js's R5).
+ */
+import { z } from "zod";
+
+import type {
+  Axis,
+  AxisId,
+  Band,
+  Check,
+  CriteriaConfig,
+  FileKind,
+  GradeBand,
+  Measure,
+  PatternDef,
+  Preset,
+  Scoring,
+  SecurityPolicy,
+} from "./types.js";
+
+const AXIS_IDS = ["clarity", "structure", "completeness", "cost", "security"] as const;
+
+const axisIdSchema: z.ZodType<AxisId> = z.enum(AXIS_IDS);
+const colorSchema = z.enum(["green", "amber", "red"]);
+const severitySchema = z.enum(["info", "warn", "blocker"]);
+
+const axisSchema: z.ZodType<Axis> = z.object({
+  id: axisIdSchema,
+  label: z.string(),
+  description: z.string(),
+});
+
+const presetSchema: z.ZodType<Preset> = z.object({
+  label: z.string(),
+  weights: z.record(axisIdSchema, z.number().min(0)),
+});
+
+const fileKindSchema: z.ZodType<FileKind> = z.object({
+  id: z.string(),
+  label: z.string(),
+  glob: z.string(),
+  note: z.string().optional(),
+});
+
+const patternDefSchema: z.ZodType<PatternDef> = z.object({
+  id: z.string(),
+  re: z.string(),
+  flags: z.string().optional(),
+  hint: z.string(),
+});
+
+const measureSchema: z.ZodType<Measure> = z.object({
+  // Not restricted to the known Measure["type"] literals here on purpose: which
+  // measure kinds actually EXIST is a criteria-only concept (the union lives in
+  // types.ts), but which ones are IMPLEMENTED is engine/measures.ts's registry —
+  // external data load.ts's validateCriteria checks separately, via
+  // `measureTypes`, to avoid a second, hand-maintained copy of that list here
+  // that could silently drift from the registry.
+  type: z.string() as z.ZodType<Measure["type"]>,
+  params: z.record(z.string(), z.unknown()).optional(),
+});
+
+const bandSchema: z.ZodType<Band> = z.object({
+  upTo: z.number().nullable(),
+  score: z.number().min(0).max(100),
+});
+
+const scoringSchema: z.ZodType<Scoring> = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("binary"), failScore: z.number().min(0).max(100).optional() }),
+  z.object({ type: z.literal("bands"), bands: z.array(bandSchema).min(1) }),
+  z.object({
+    type: z.literal("penalty"),
+    perHit: z.number().min(0),
+    floor: z.number().min(0).max(100).optional(),
+  }),
+  z.object({ type: z.literal("ai") }),
+]);
+
+const gradeBandSchema: z.ZodType<GradeBand> = z.object({
+  min: z.number().min(0).max(100),
+  label: z.string(),
+  color: colorSchema,
+});
+
+const securityPolicySchema: z.ZodType<SecurityPolicy> = z.object({
+  blockerCapsOverallAt: z.number().min(0).max(100),
+  reportBlockersSeparately: z.boolean(),
+  redactWith: z.array(z.string()).optional(),
+});
+
+/**
+ * The fields a `check.overrides[fileKind]` entry may set — every Check
+ * field except `id`/`mode`/`axis` (forbidden; enforced in validateOverrides
+ * below, where the surrounding config's `fileKinds` is in scope for the
+ * key-membership check too) and `overrides` itself (no override-of-an-
+ * override). Real per-field validators rather than `z.unknown()`, so e.g.
+ * `weight: "high"` fails to load instead of corrupting scoring.ts's
+ * resolveCheck() spread-merge with a wrongly typed value. The `as
+ * z.ZodType<...>` cast is only for the `exactOptionalPropertyTypes` gap
+ * between Zod's `.optional()` (`T | undefined`) and `Partial<Check>`'s
+ * bare `?:` — the object shape itself is fully checked.
+ */
+const checkOverrideSchema = z
+  .object({
+    label: z.string().optional(),
+    weight: z.number().min(0).optional(),
+    appliesTo: z.array(z.string()).optional(),
+    requires: z.array(z.string()).optional(),
+    measure: measureSchema.optional(),
+    scoring: scoringSchema.optional(),
+    severity: severitySchema.optional(),
+    fix: z.string().optional(),
+    question: z.string().optional(),
+  })
+  // .passthrough(), not .strict(): a forbidden key (id/mode/axis) must
+  // SURVIVE parsing so validateOverrides below can see it and raise its
+  // own, more specific "must not set ..." issue — stripping it here would
+  // let a forbidden override through unnoticed.
+  .passthrough();
+
+const checkSchema: z.ZodType<Check> = z.object({
+  id: z.string(),
+  axis: axisIdSchema,
+  label: z.string(),
+  weight: z.number().min(0),
+  mode: z.enum(["mechanical", "ai"]),
+  appliesTo: z.array(z.string()),
+  requires: z.array(z.string()).optional(),
+  measure: measureSchema.optional(),
+  scoring: scoringSchema,
+  severity: severitySchema.optional(),
+  fix: z.string(),
+  question: z.string().optional(),
+  overrides: z.record(z.string(), checkOverrideSchema).optional() as z.ZodType<Check["overrides"]>,
+});
+
+export const criteriaConfigSchema: z.ZodType<CriteriaConfig> = z
+  .object({
+    schemaVersion: z.literal(1),
+    tool: z.string(),
+    criteriaVersion: z.string(),
+    updated: z.string(),
+    axes: z.array(axisSchema).min(1),
+    presets: z.record(z.string(), presetSchema),
+    defaultPreset: z.string(),
+    fileKinds: z.array(fileKindSchema).min(1),
+    defaultFileKind: z.string(),
+    sets: z.object({
+      words: z.record(z.string(), z.array(z.string())),
+      patterns: z.record(z.string(), z.array(patternDefSchema)),
+    }),
+    checks: z.array(checkSchema),
+    grades: z.array(gradeBandSchema).min(1),
+    security: securityPolicySchema,
+  })
+  .superRefine(validateCrossReferences);
+
+/**
+ * Everything that needs more than one field of the config at once — exactly
+ * what a hand-written `validateCriteria` already did, now as Zod issues
+ * (each with a `path`, so the error message can point at where in the JSON
+ * to look) instead of a flat `fail(...)` list.
+ */
+function validateCrossReferences(config: CriteriaConfig, ctx: z.RefinementCtx): void {
+  const axisIds = new Set(config.axes.map((axis) => axis.id));
+  const fileKindIds = new Set(config.fileKinds.map((kind) => kind.id));
+
+  if (!fileKindIds.has(config.defaultFileKind)) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["defaultFileKind"],
+      message: `"${config.defaultFileKind}" is not a defined file kind`,
+    });
+  }
+  if (!config.presets[config.defaultPreset]) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["defaultPreset"],
+      message: `"${config.defaultPreset}" does not exist in presets`,
+    });
+  }
+
+  validatePatternSets(config, ctx);
+
+  // A weight per axis for every preset is already enforced structurally —
+  // presetSchema.weights is z.record(axisIdSchema, z.number()), so a missing
+  // key fails to parse before this refinement ever runs. No extra check here.
+
+  // All ids up front so `requires` can point forward; a second set catches duplicates.
+  const checkIds = new Set(config.checks.map((check) => check.id));
+  const seenIds = new Set<string>();
+  config.checks.forEach((check, index) => {
+    const basePath = ["checks", index];
+
+    if (seenIds.has(check.id)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["checks", index, "id"],
+        message: `duplicate check id "${check.id}"`,
+      });
+    }
+    seenIds.add(check.id);
+
+    if (!axisIds.has(check.axis)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["checks", index, "axis"],
+        message: `check "${check.id}" points at unknown axis "${check.axis}"`,
+      });
+    }
+
+    validateAppliesTo(check.appliesTo, check.id, fileKindIds, basePath, ctx);
+
+    if (check.mode === "mechanical" && !check.measure) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["checks", index, "measure"],
+        message: `mechanical check "${check.id}" has no measure`,
+      });
+    }
+    if (check.mode === "ai" && !check.question) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["checks", index, "question"],
+        message: `ai check "${check.id}" has no question`,
+      });
+    }
+
+    validateModeScoring(check.mode, check.scoring, check.id, basePath, ctx);
+    if (check.scoring.type === "bands") {
+      validateBandOrder(check.scoring.bands, check.id, basePath, ctx);
+    }
+    validateSetReferences(config, check.measure, check.id, basePath, ctx);
+    validateRequires(check.requires, check.id, checkIds, basePath, ctx);
+    validateOverrides(config, check, index, fileKindIds, checkIds, ctx);
+  });
+
+  (config.security.redactWith ?? []).forEach((setId, setIndex) => {
+    if (!config.sets.patterns[setId]) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["security", "redactWith", setIndex],
+        message: `security.redactWith references unknown pattern set "${setId}"`,
+      });
+    }
+  });
+}
+
+/**
+ * `pattern.re`/`pattern.flags` are compiled into a real `RegExp` on every
+ * file analyzed (measures.ts, text.ts) — an invalid expression should fail
+ * loudly here, once, rather than degrading every check that uses it to a
+ * silent per-file failure.
+ */
+function validatePatternSets(config: CriteriaConfig, ctx: z.RefinementCtx): void {
+  Object.entries(config.sets.patterns).forEach(([setId, patterns]) => {
+    patterns.forEach((pattern, patternIndex) => {
+      try {
+        new RegExp(pattern.re, pattern.flags);
+      } catch (error) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["sets", "patterns", setId, patternIndex, "re"],
+          message: `pattern "${pattern.id}" in set "${setId}" is not a valid regular expression: ${error instanceof Error ? error.message : String(error)}`,
+        });
+      }
+    });
+  });
+}
+
+/**
+ * scoring.ts routes by `mode`, not by `scoring.type`: an ai check's score comes
+ * from the model and its `scoring` is never read, while a mechanical check with
+ * `scoring.type: "ai"` gets `undefined` from scoreFromMechanical and silently
+ * never scores. Either mismatch is dead config — reject it at load time.
+ */
+function validateModeScoring(
+  mode: Check["mode"],
+  scoring: Scoring,
+  checkId: string,
+  basePath: (string | number)[],
+  ctx: z.RefinementCtx,
+): void {
+  if (mode === "ai" && scoring.type !== "ai") {
+    ctx.addIssue({
+      code: "custom",
+      path: [...basePath, "scoring", "type"],
+      message: `ai check "${checkId}" must use scoring type "ai", not "${scoring.type}"`,
+    });
+  }
+  if (mode === "mechanical" && scoring.type === "ai") {
+    ctx.addIssue({
+      code: "custom",
+      path: [...basePath, "scoring", "type"],
+      message: `mechanical check "${checkId}" cannot use scoring type "ai"`,
+    });
+  }
+}
+
+/** Bands ascend strictly by `upTo`, and only the LAST band may be open-ended (upTo: null). */
+function validateBandOrder(
+  bands: Band[],
+  checkId: string,
+  basePath: (string | number)[],
+  ctx: z.RefinementCtx,
+): void {
+  const last = bands.at(-1);
+  if (!last || last.upTo !== null) {
+    ctx.addIssue({
+      code: "custom",
+      path: [...basePath, "scoring", "bands"],
+      message: `check "${checkId}": last band must be open ended (upTo: null)`,
+    });
+  }
+
+  let previousUpTo: number | null = null;
+  bands.forEach((band, bandIndex) => {
+    if (bandIndex === bands.length - 1) return; // the last band's null is checked above
+    if (band.upTo === null) {
+      ctx.addIssue({
+        code: "custom",
+        path: [...basePath, "scoring", "bands", bandIndex, "upTo"],
+        message: `check "${checkId}": only the last band may have upTo: null`,
+      });
+      return;
+    }
+    if (previousUpTo !== null && band.upTo <= previousUpTo) {
+      ctx.addIssue({
+        code: "custom",
+        path: [...basePath, "scoring", "bands", bandIndex, "upTo"],
+        message: `check "${checkId}": band upTo values must be strictly ascending`,
+      });
+    }
+    previousUpTo = band.upTo;
+  });
+}
+
+function validateAppliesTo(
+  appliesTo: string[],
+  checkId: string,
+  fileKindIds: Set<string>,
+  basePath: (string | number)[],
+  ctx: z.RefinementCtx,
+): void {
+  appliesTo.forEach((kind, kindIndex) => {
+    if (!fileKindIds.has(kind)) {
+      ctx.addIssue({
+        code: "custom",
+        path: [...basePath, "appliesTo", kindIndex],
+        message: `check "${checkId}" applies to unknown file kind "${kind}"`,
+      });
+    }
+  });
+}
+
+function validateRequires(
+  requires: string[] | undefined,
+  checkId: string,
+  checkIds: Set<string>,
+  basePath: (string | number)[],
+  ctx: z.RefinementCtx,
+): void {
+  (requires ?? []).forEach((required, requiredIndex) => {
+    if (!checkIds.has(required)) {
+      ctx.addIssue({
+        code: "custom",
+        path: [...basePath, "requires", requiredIndex],
+        message: `check "${checkId}" requires unknown check "${required}"`,
+      });
+    }
+  });
+}
+
+function validateSetReferences(
+  config: CriteriaConfig,
+  measure: Measure | undefined,
+  checkId: string,
+  basePath: (string | number)[],
+  ctx: z.RefinementCtx,
+): void {
+  const params = measure?.params;
+  if (!params) return;
+
+  const wordSetId = params["wordSet"];
+  if (typeof wordSetId === "string" && !config.sets.words[wordSetId]) {
+    ctx.addIssue({
+      code: "custom",
+      path: [...basePath, "measure", "params", "wordSet"],
+      message: `check "${checkId}" references unknown word set "${wordSetId}"`,
+    });
+  }
+
+  const patternSetId = params["patternSet"];
+  if (typeof patternSetId === "string" && !config.sets.patterns[patternSetId]) {
+    ctx.addIssue({
+      code: "custom",
+      path: [...basePath, "measure", "params", "patternSet"],
+      message: `check "${checkId}" references unknown pattern set "${patternSetId}"`,
+    });
+  }
+
+  const stopwordSets = params["stopwordSets"];
+  if (stopwordSets && typeof stopwordSets === "object") {
+    for (const [language, setId] of Object.entries(stopwordSets as Record<string, unknown>)) {
+      if (typeof setId === "string" && !config.sets.words[setId]) {
+        ctx.addIssue({
+          code: "custom",
+          path: [...basePath, "measure", "params", "stopwordSets", language],
+          message: `check "${checkId}" references unknown word set "${setId}"`,
+        });
+      }
+    }
+  }
+}
+
+const FORBIDDEN_OVERRIDE_KEYS = ["id", "mode", "axis"] as const;
+
+function validateOverrides(
+  config: CriteriaConfig,
+  check: Check,
+  checkIndex: number,
+  fileKindIds: Set<string>,
+  checkIds: Set<string>,
+  ctx: z.RefinementCtx,
+): void {
+  for (const [fileKindId, override] of Object.entries(check.overrides ?? {})) {
+    const basePath = ["checks", checkIndex, "overrides", fileKindId];
+    const label = `${check.id} (override for "${fileKindId}")`;
+
+    if (!fileKindIds.has(fileKindId)) {
+      ctx.addIssue({
+        code: "custom",
+        path: basePath,
+        message: `check "${check.id}" overrides unknown file kind "${fileKindId}"`,
+      });
+    }
+    for (const forbidden of FORBIDDEN_OVERRIDE_KEYS) {
+      if (override && typeof override === "object" && forbidden in override) {
+        ctx.addIssue({
+          code: "custom",
+          path: [...basePath, forbidden],
+          message: `check "${check.id}": an override for "${fileKindId}" must not set "${forbidden}"`,
+        });
+      }
+    }
+
+    // resolveCheck() spreads these straight onto the base check at runtime, so
+    // whatever the override sets gets the same semantic rules as the base —
+    // only the fields it actually sets, so a base-check problem isn't reported
+    // a second time under a misleading override path.
+    if (override.scoring) {
+      validateModeScoring(check.mode, override.scoring, label, basePath, ctx);
+      if (override.scoring.type === "bands") {
+        validateBandOrder(override.scoring.bands, label, basePath, ctx);
+      }
+    }
+    if (override.measure) {
+      validateSetReferences(config, override.measure, label, basePath, ctx);
+    }
+    if (override.requires) {
+      validateRequires(override.requires, label, checkIds, basePath, ctx);
+    }
+    if (override.appliesTo) {
+      validateAppliesTo(override.appliesTo, label, fileKindIds, basePath, ctx);
+    }
+  }
+}
+
+/** One "path: message" line per Zod issue — the same shape the old fail() list had. */
+export function describeSchemaIssues(error: z.ZodError): string[] {
+  return error.issues.map((issue) => {
+    const path = issue.path.length > 0 ? `${issue.path.join(".")}: ` : "";
+    return `${path}${issue.message}`;
+  });
+}

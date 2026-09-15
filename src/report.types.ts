@@ -1,11 +1,11 @@
 /**
  * Sifty — report schema.
  *
- * Defined here (not in criteria.types.ts) because the report describes a RUN,
+ * Defined here (not in criteria/types.ts) because the report describes a RUN,
  * not the config.
  */
 
-import type { AxisId } from "./criteria.types.js";
+import type { AxisId } from "./criteria/types.js";
 
 /** A single located observation backing a measurement or finding. */
 export interface Evidence {
@@ -59,6 +59,8 @@ export interface AxisScore {
   checkCount: number;
   /** Checks assigned to this axis for this file, whether or not they contributed. */
   totalChecks: number;
+  /** From the SAME grade bands as the overall grade (config.grades) — not a hardcoded threshold. */
+  color: "green" | "amber" | "red";
 }
 
 /** A blocker-severity check that did not fully pass — caps the overall score. */

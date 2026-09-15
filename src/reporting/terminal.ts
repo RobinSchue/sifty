@@ -2,7 +2,8 @@
  * Sifty — terminal report formatting.
  *
  * One function, one job: turn a `Report` into the string the CLI prints.
- * Kept separate from `src/index.ts` so the CLI stays composition-only.
+ * Kept separate from `src/cli.ts` so the CLI stays composition-only. See
+ * `json.ts` for the other supported `--format`.
  */
 
 import chalk from "chalk";
@@ -11,7 +12,7 @@ import type { Evidence, Report } from "../report.types.js";
 
 const BAR_WIDTH = 20;
 
-export function formatReport(report: Report): string {
+export function formatTerminal(report: Report): string {
   const lines: string[] = [];
 
   lines.push(chalk.bold(`\nFile: ${report.file}`));
@@ -51,9 +52,9 @@ export function formatReport(report: Report): string {
     const scoreCell =
       axis.checkCount === 0
         ? chalk.dim("n/a")
-        : colorFor(gradeColorFor(axis.score))(String(axis.score).padStart(3));
+        : colorFor(axis.color)(String(axis.score).padStart(3));
     lines.push(
-      `  ${axis.label.padEnd(20)} ${axis.checkCount === 0 ? emptyBar() : bar(axis.score)} ${scoreCell}${coverage}`,
+      `  ${axis.label.padEnd(20)} ${axis.checkCount === 0 ? emptyBar() : bar(axis.score, axis.color)} ${scoreCell}${coverage}`,
     );
   }
 
@@ -71,10 +72,10 @@ export function formatReport(report: Report): string {
   return lines.join("\n");
 }
 
-function bar(score: number): string {
+function bar(score: number, color: "green" | "amber" | "red"): string {
   const filled = Math.round((clamp(score) / 100) * BAR_WIDTH);
   const empty = BAR_WIDTH - filled;
-  return colorFor(gradeColorFor(score))("█".repeat(filled)) + chalk.dim("░".repeat(empty));
+  return colorFor(color)("█".repeat(filled)) + chalk.dim("░".repeat(empty));
 }
 
 function emptyBar(): string {
@@ -83,13 +84,6 @@ function emptyBar(): string {
 
 function clamp(score: number): number {
   return Math.min(100, Math.max(0, score));
-}
-
-/** Same thresholds as the default grade bands — used for axis bars without a config lookup. */
-function gradeColorFor(score: number): "green" | "amber" | "red" {
-  if (score >= 70) return "green";
-  if (score >= 50) return "amber";
-  return "red";
 }
 
 function colorFor(color: "green" | "amber" | "red"): (text: string) => string {

@@ -1,0 +1,34 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`formatJson > serializes the full AnalyzeResult contract as pretty-printed JSON 1`] = `
+"{
+  "report": {
+    "tool": "copilot",
+    "criteriaVersion": "1.0.0",
+    "file": "a.instructions.md",
+    "fileKind": "scoped",
+    "preset": "balanced",
+    "measurements": [],
+    "aiFindings": [],
+    "checkScores": [],
+    "axisScores": [
+      {
+        "axis": "clarity",
+        "label": "Clarity & Precision",
+        "score": 90,
+        "checkCount": 3,
+        "totalChecks": 3,
+        "color": "green"
+      }
+    ],
+    "overallScore": 90,
+    "grade": {
+      "label": "strong",
+      "color": "green"
+    },
+    "blockers": [],
+    "fixes": []
+  },
+  "failures": []
+}"
+`;

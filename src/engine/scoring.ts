@@ -7,7 +7,8 @@
  * sorted by impact.
  */
 
-import type { Check, CriteriaConfig, Scoring } from "../criteria.types.js";
+import { redactEvidence } from "./text.js";
+import type { Check, CriteriaConfig, PatternDef, Scoring } from "../criteria/types.js";
 import type {
   AiFinding,
   AxisScore,
@@ -67,7 +68,7 @@ export function buildReport(args: BuildReportArgs): Report {
     }
   }
 
-  const resolved = applyRequiresGating(relevantChecks, raw);
+  const resolved = redactAllEvidence(args.config, applyRequiresGating(relevantChecks, raw));
   const axisScores = aggregateAxisScores(args.config, resolved);
   const blockers = findBlockers(resolved);
 
@@ -78,14 +79,29 @@ export function buildReport(args: BuildReportArgs): Report {
     overallScore = args.config.security.blockerCapsOverallAt;
   }
 
+  // checkScores/blockers/fixes all read evidence through `resolved`, already
+  // redacted above — but report.measurements/aiFindings are the raw inputs,
+  // a second, independent path to the same evidence (e.g. the JSON output).
+  // Redact them too, or a secret scrubbed from the fix list would still show
+  // up verbatim right next to it.
+  const patterns = collectRedactionPatterns(args.config);
+  const redactedMeasurements = args.measurements.map((measurement) => ({
+    ...measurement,
+    evidence: redactEvidence(measurement.evidence, patterns),
+  }));
+  const redactedAiFindings = (args.aiFindings ?? []).map((finding) => ({
+    ...finding,
+    evidence: redactEvidence(finding.evidence, patterns),
+  }));
+
   return {
     tool: args.config.tool,
     criteriaVersion: args.config.criteriaVersion,
     file: args.file,
     fileKind: args.fileKind,
     preset,
-    measurements: args.measurements,
-    aiFindings: args.aiFindings ?? [],
+    measurements: redactedMeasurements,
+    aiFindings: redactedAiFindings,
     checkScores: [...resolved.entries()].map(toCheckScore),
     axisScores,
     overallScore,
@@ -200,6 +216,34 @@ function applyRequiresGating(
 }
 
 /* ------------------------------------------------------------------ *
+ * Evidence redaction
+ *
+ * Applied once, here, after gating and before anything reads `.evidence` —
+ * checkScores, blockers and the fix list all derive from this same map, so
+ * this is the one place that guarantees every one of them sees redacted
+ * text regardless of whether it came from a measure or the model.
+ * ------------------------------------------------------------------ */
+
+function redactAllEvidence(
+  config: CriteriaConfig,
+  resolved: Map<string, RawOutcome>,
+): Map<string, RawOutcome> {
+  const patterns = collectRedactionPatterns(config);
+  if (patterns.length === 0) return resolved;
+
+  const out = new Map<string, RawOutcome>();
+  for (const [id, outcome] of resolved) {
+    out.set(id, { ...outcome, evidence: redactEvidence(outcome.evidence, patterns) });
+  }
+  return out;
+}
+
+function collectRedactionPatterns(config: CriteriaConfig): PatternDef[] {
+  const setIds = config.security.redactWith ?? [];
+  return setIds.flatMap((id) => config.sets.patterns[id] ?? []);
+}
+
+/* ------------------------------------------------------------------ *
  * Aggregation
  * ------------------------------------------------------------------ */
 
@@ -215,13 +259,18 @@ function aggregateAxisScores(
       totalWeight > 0
         ? applicable.reduce((sum, o) => sum + o.check.weight * (o.score ?? 0), 0) / totalWeight
         : 0;
+    const rounded = Math.round(score);
 
     return {
       axis: axis.id,
       label: axis.label,
-      score: Math.round(score),
+      score: rounded,
       checkCount: applicable.length,
       totalChecks: onAxis.length,
+      // Same grade bands as the overall score (config.grades) — not a
+      // hardcoded threshold (see the terminal formatter, which used to have
+      // its own 70/50 copy of this).
+      color: resolveGrade(config, rounded).color,
     };
   });
 }
@@ -231,7 +280,10 @@ function computeOverallScore(
   preset: string,
   axisScores: AxisScore[],
 ): number {
-  const weights = (config.presets[preset] ?? config.presets[config.defaultPreset])?.weights;
+  // No fallback to the default preset's weights: an unknown preset name must fail
+  // loudly at the boundary (see runner.ts) — silently scoring with different
+  // weights than the report claims to use is worse than a crash.
+  const weights = config.presets[preset]?.weights;
   if (!weights) return 0;
 
   // An axis with zero contributing checks (e.g. AI layer not connected, or every

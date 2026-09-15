@@ -1,0 +1,320 @@
+[
+  {
+    "preset": "balanced",
+    "withAi": false,
+    "overallScore": 77,
+    "grade": {
+      "label": "solid",
+      "color": "green"
+    },
+    "axisScores": [
+      {
+        "axis": "clarity",
+        "score": 100,
+        "checkCount": 3,
+        "totalChecks": 5,
+        "color": "green"
+      },
+      {
+        "axis": "structure",
+        "score": 100,
+        "checkCount": 6,
+        "totalChecks": 6,
+        "color": "green"
+      },
+      {
+        "axis": "completeness",
+        "score": 16,
+        "checkCount": 2,
+        "totalChecks": 5,
+        "color": "red"
+      },
+      {
+        "axis": "cost",
+        "score": 70,
+        "checkCount": 4,
+        "totalChecks": 4,
+        "color": "green"
+      },
+      {
+        "axis": "security",
+        "score": 100,
+        "checkCount": 4,
+        "totalChecks": 4,
+        "color": "green"
+      }
+    ],
+    "blockers": [],
+    "fixes": ["completeness.examples", "cost.output-constraint", "completeness.dos-and-donts"],
+    "fileKind": "scoped"
+  },
+  {
+    "preset": "balanced",
+    "withAi": true,
+    "overallScore": 80,
+    "grade": {
+      "label": "solid",
+      "color": "green"
+    },
+    "axisScores": [
+      {
+        "axis": "clarity",
+        "score": 90,
+        "checkCount": 5,
+        "totalChecks": 5,
+        "color": "green"
+      },
+      {
+        "axis": "structure",
+        "score": 100,
+        "checkCount": 6,
+        "totalChecks": 6,
+        "color": "green"
+      },
+      {
+        "axis": "completeness",
+        "score": 42,
+        "checkCount": 4,
+        "totalChecks": 5,
+        "color": "red"
+      },
+      {
+        "axis": "cost",
+        "score": 70,
+        "checkCount": 4,
+        "totalChecks": 4,
+        "color": "green"
+      },
+      {
+        "axis": "security",
+        "score": 100,
+        "checkCount": 4,
+        "totalChecks": 4,
+        "color": "green"
+      }
+    ],
+    "blockers": [],
+    "fixes": [
+      "completeness.examples",
+      "cost.output-constraint",
+      "completeness.dos-and-donts",
+      "completeness.project-context",
+      "clarity.concrete-instructions",
+      "completeness.scope-statement",
+      "clarity.contradictions"
+    ],
+    "fileKind": "scoped"
+  },
+  {
+    "preset": "cost",
+    "withAi": false,
+    "overallScore": 79,
+    "grade": {
+      "label": "solid",
+      "color": "green"
+    },
+    "axisScores": [
+      {
+        "axis": "clarity",
+        "score": 100,
+        "checkCount": 3,
+        "totalChecks": 5,
+        "color": "green"
+      },
+      {
+        "axis": "structure",
+        "score": 100,
+        "checkCount": 6,
+        "totalChecks": 6,
+        "color": "green"
+      },
+      {
+        "axis": "completeness",
+        "score": 16,
+        "checkCount": 2,
+        "totalChecks": 5,
+        "color": "red"
+      },
+      {
+        "axis": "cost",
+        "score": 70,
+        "checkCount": 4,
+        "totalChecks": 4,
+        "color": "green"
+      },
+      {
+        "axis": "security",
+        "score": 100,
+        "checkCount": 4,
+        "totalChecks": 4,
+        "color": "green"
+      }
+    ],
+    "blockers": [],
+    "fixes": ["completeness.examples", "cost.output-constraint", "completeness.dos-and-donts"],
+    "fileKind": "scoped"
+  },
+  {
+    "preset": "cost",
+    "withAi": true,
+    "overallScore": 80,
+    "grade": {
+      "label": "solid",
+      "color": "green"
+    },
+    "axisScores": [
+      {
+        "axis": "clarity",
+        "score": 90,
+        "checkCount": 5,
+        "totalChecks": 5,
+        "color": "green"
+      },
+      {
+        "axis": "structure",
+        "score": 100,
+        "checkCount": 6,
+        "totalChecks": 6,
+        "color": "green"
+      },
+      {
+        "axis": "completeness",
+        "score": 42,
+        "checkCount": 4,
+        "totalChecks": 5,
+        "color": "red"
+      },
+      {
+        "axis": "cost",
+        "score": 70,
+        "checkCount": 4,
+        "totalChecks": 4,
+        "color": "green"
+      },
+      {
+        "axis": "security",
+        "score": 100,
+        "checkCount": 4,
+        "totalChecks": 4,
+        "color": "green"
+      }
+    ],
+    "blockers": [],
+    "fixes": [
+      "completeness.examples",
+      "cost.output-constraint",
+      "completeness.dos-and-donts",
+      "completeness.project-context",
+      "clarity.concrete-instructions",
+      "completeness.scope-statement",
+      "clarity.contradictions"
+    ],
+    "fileKind": "scoped"
+  },
+  {
+    "preset": "security",
+    "withAi": false,
+    "overallScore": 84,
+    "grade": {
+      "label": "solid",
+      "color": "green"
+    },
+    "axisScores": [
+      {
+        "axis": "clarity",
+        "score": 100,
+        "checkCount": 3,
+        "totalChecks": 5,
+        "color": "green"
+      },
+      {
+        "axis": "structure",
+        "score": 100,
+        "checkCount": 6,
+        "totalChecks": 6,
+        "color": "green"
+      },
+      {
+        "axis": "completeness",
+        "score": 16,
+        "checkCount": 2,
+        "totalChecks": 5,
+        "color": "red"
+      },
+      {
+        "axis": "cost",
+        "score": 70,
+        "checkCount": 4,
+        "totalChecks": 4,
+        "color": "green"
+      },
+      {
+        "axis": "security",
+        "score": 100,
+        "checkCount": 4,
+        "totalChecks": 4,
+        "color": "green"
+      }
+    ],
+    "blockers": [],
+    "fixes": ["completeness.examples", "cost.output-constraint", "completeness.dos-and-donts"],
+    "fileKind": "scoped"
+  },
+  {
+    "preset": "security",
+    "withAi": true,
+    "overallScore": 86,
+    "grade": {
+      "label": "strong",
+      "color": "green"
+    },
+    "axisScores": [
+      {
+        "axis": "clarity",
+        "score": 90,
+        "checkCount": 5,
+        "totalChecks": 5,
+        "color": "green"
+      },
+      {
+        "axis": "structure",
+        "score": 100,
+        "checkCount": 6,
+        "totalChecks": 6,
+        "color": "green"
+      },
+      {
+        "axis": "completeness",
+        "score": 42,
+        "checkCount": 4,
+        "totalChecks": 5,
+        "color": "red"
+      },
+      {
+        "axis": "cost",
+        "score": 70,
+        "checkCount": 4,
+        "totalChecks": 4,
+        "color": "green"
+      },
+      {
+        "axis": "security",
+        "score": 100,
+        "checkCount": 4,
+        "totalChecks": 4,
+        "color": "green"
+      }
+    ],
+    "blockers": [],
+    "fixes": [
+      "completeness.examples",
+      "cost.output-constraint",
+      "completeness.dos-and-donts",
+      "completeness.project-context",
+      "clarity.concrete-instructions",
+      "completeness.scope-statement",
+      "clarity.contradictions"
+    ],
+    "fileKind": "scoped"
+  }
+]

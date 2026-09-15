@@ -30,8 +30,8 @@ export interface CriteriaConfig {
     patterns: Record<string, PatternDef[]>;
   };
   checks: Check[];
-  /** Thresholds for the rating badge in the report. */
-  grades: Grade[];
+  /** Thresholds for the rating badge in the report — overall AND per axis. */
+  grades: GradeBand[];
   security: SecurityPolicy;
 }
 
@@ -53,14 +53,14 @@ export interface FileKind {
   label: string;
   /** Glob matched against the file path. First match wins. */
   glob: string;
-  note?: string;
+  note?: string | undefined;
 }
 
 export interface PatternDef {
   id: string;
   /** Regex as a string — compiled to RegExp at runtime. */
   re: string;
-  flags?: string;
+  flags?: string | undefined;
   /** Plain-language hint shown in the fix list. */
   hint: string;
 }
@@ -77,17 +77,17 @@ export interface Check {
   /** Empty array = applies to all file kinds. Otherwise n/a → dropped from numerator AND denominator. */
   appliesTo: string[];
   /** n/a as long as the listed checks did not pass (e.g. validating a glob without applyTo). */
-  requires?: string[];
+  requires?: string[] | undefined;
   /** Mechanical only: what gets measured. */
-  measure?: Measure;
+  measure?: Measure | undefined;
   scoring: Scoring;
-  severity?: "info" | "warn" | "blocker";
+  severity?: "info" | "warn" | "blocker" | undefined;
   /** Text for the fix list when the check scores poorly. */
   fix: string;
   /** AI only: the concrete question sent to the model. */
-  question?: string;
+  question?: string | undefined;
   /** Fields overridden per file kind, e.g. stricter token limits. */
-  overrides?: Record<string, Partial<Check>>;
+  overrides?: Record<string, Partial<Check>> | undefined;
 }
 
 export interface Measure {
@@ -104,16 +104,16 @@ export interface Measure {
     | "blockLength" // longest paragraph / code block in lines
     | "duplicateLines" // identical normalized lines
     | "languageGuess"; // stopword ratio → is the prose written in the expected language?
-  params?: Record<string, unknown>;
+  params?: Record<string, unknown> | undefined;
 }
 
 export type Scoring =
   /** Passed = 100, failed = 0. */
-  | { type: "binary"; failScore?: number }
+  | { type: "binary"; failScore?: number | undefined }
   /** Measured value mapped into score bands. Bands ascending, last upTo = null. */
   | { type: "bands"; bands: Band[] }
   /** Starts at 100, every hit costs. Never below floor. */
-  | { type: "penalty"; perHit: number; floor?: number }
+  | { type: "penalty"; perHit: number; floor?: number | undefined }
   /** The model returns 0–100 plus rationale and evidence lines. */
   | { type: "ai" };
 
@@ -123,7 +123,8 @@ export interface Band {
   score: number;
 }
 
-export interface Grade {
+/** One threshold in a `grades` ladder — the highest `min` the score meets wins. */
+export interface GradeBand {
   min: number;
   label: string;
   color: "green" | "amber" | "red";
@@ -138,4 +139,12 @@ export interface SecurityPolicy {
   blockerCapsOverallAt: number;
   /** Also surface blockers as a separate warning above the report. */
   reportBlockersSeparately: boolean;
+  /**
+   * Pattern set ids (keys into `sets.patterns`) run over every Evidence's
+   * `excerpt` and `hint` before it reaches the report — mechanical evidence is
+   * usually pre-redacted at the source already (see measures.ts patternHits),
+   * but AI findings quote the file directly and are not. Applied once, here,
+   * regardless of source. Omit or leave empty to redact nothing.
+   */
+  redactWith?: string[] | undefined;
 }

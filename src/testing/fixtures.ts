@@ -12,12 +12,33 @@ import type {
   Check,
   CriteriaConfig,
   FileKind,
-  Grade,
+  GradeBand,
+  Measure,
   PatternDef,
   Preset,
-} from "../criteria.types.js";
+} from "../criteria/types.js";
 
 const ALL_AXES: AxisId[] = ["clarity", "structure", "completeness", "cost", "security"];
+
+/**
+ * Every measure kind the engine implements (mirrors engine/measures.ts's
+ * registry). Kept here, not imported from the engine, so criteria/load.ts
+ * and its tests stay decoupled from src/engine/** — see ValidateCriteriaOptions.
+ */
+export const ALL_MEASURE_TYPES: Measure["type"][] = [
+  "tokenCount",
+  "frontmatterField",
+  "frontmatterValid",
+  "globValidity",
+  "globBreadth",
+  "wordDensity",
+  "patternHits",
+  "markerPresence",
+  "headingStructure",
+  "blockLength",
+  "duplicateLines",
+  "languageGuess",
+];
 
 export function makeAxes(): Axis[] {
   return ALL_AXES.map((id) => ({ id, label: id, description: `${id} axis` }));
@@ -41,7 +62,7 @@ export function makeFileKinds(): FileKind[] {
   ];
 }
 
-export function makeGrades(): Grade[] {
+export function makeGrades(): GradeBand[] {
   return [
     { min: 90, label: "excellent", color: "green" },
     { min: 70, label: "good", color: "green" },
@@ -51,6 +72,7 @@ export function makeGrades(): Grade[] {
 }
 
 export interface MakeConfigOptions {
+  axes?: Axis[];
   checks?: Check[];
   words?: Record<string, string[]>;
   patterns?: Record<string, PatternDef[]>;
@@ -59,6 +81,8 @@ export interface MakeConfigOptions {
   presets?: Record<string, Preset>;
   defaultPreset?: string;
   blockerCapsOverallAt?: number;
+  redactWith?: string[];
+  grades?: GradeBand[];
 }
 
 /** A complete, minimal, valid CriteriaConfig — override only what a test needs. */
@@ -68,7 +92,7 @@ export function makeConfig(options: MakeConfigOptions = {}): CriteriaConfig {
     tool: "test-tool",
     criteriaVersion: "0.0.0-test",
     updated: "2024-01-01",
-    axes: makeAxes(),
+    axes: options.axes ?? makeAxes(),
     presets: options.presets ?? { balanced: makePreset() },
     defaultPreset: options.defaultPreset ?? "balanced",
     fileKinds: options.fileKinds ?? makeFileKinds(),
@@ -78,10 +102,11 @@ export function makeConfig(options: MakeConfigOptions = {}): CriteriaConfig {
       patterns: options.patterns ?? {},
     },
     checks: options.checks ?? [],
-    grades: makeGrades(),
+    grades: options.grades ?? makeGrades(),
     security: {
       blockerCapsOverallAt: options.blockerCapsOverallAt ?? 40,
       reportBlockersSeparately: true,
+      ...(options.redactWith ? { redactWith: options.redactWith } : {}),
     },
   };
 }

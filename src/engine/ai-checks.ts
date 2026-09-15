@@ -1,20 +1,16 @@
 /**
  * Sifty — bundled AI evaluation.
  *
- * Builds the single structured Anthropic request for all pending AI checks,
- * validates the response, and retries once when the model returns malformed or
- * incomplete structured data.
+ * Builds the single structured request for all pending AI checks, sends it
+ * through an `AiProvider` (see ai-provider.ts — no SDK import here, on
+ * purpose), validates the response, and retries once when the model returns
+ * malformed or incomplete structured data.
  */
-
-import Anthropic, { type ParseableMessageCreateParams } from "@anthropic-ai/sdk";
-import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { z } from "zod";
 
-import type { Check } from "../criteria.types.js";
+import type { AiProvider, TokenUsage } from "./ai-provider.js";
+import type { Check } from "../criteria/types.js";
 import type { AiFinding, Evidence } from "../report.types.js";
-
-/** Cost-efficient default for the bundled scoring call; easy to bump in one place later. */
-export const AI_MODEL = "claude-haiku-4-5";
 
 export const aiEvidenceSchema = z.object({
   line: z.number().int().positive().optional(),
@@ -36,14 +32,6 @@ export const aiFindingsResponseSchema = z.object({
 
 export type AiFindingsResponse = z.infer<typeof aiFindingsResponseSchema>["findings"];
 
-export interface AiClient {
-  messages: {
-    parse(request: ParseableMessageCreateParams): Promise<{
-      parsed_output: unknown;
-    }>;
-  };
-}
-
 export interface BuildAiRequestArgs {
   checks: Check[];
   fileContent: string;
@@ -57,8 +45,7 @@ export interface RunAiChecksArgs {
   fileContent: string;
   fileKind: string;
   tool: string;
-  apiKey?: string | undefined;
-  client?: AiClient | undefined;
+  provider?: AiProvider | undefined;
 }
 
 const MAX_TOKENS = 4096;
@@ -71,7 +58,8 @@ const SYSTEM_PROMPT = [
   "Return only structured output matching the requested schema.",
 ].join(" ");
 
-export function buildAiRequest(args: BuildAiRequestArgs): ParseableMessageCreateParams {
+/** The two pieces an AiProvider needs — model, token budget and output format are its concern, not ours. */
+export function buildAiRequest(args: BuildAiRequestArgs): { system: string; user: string } {
   const retryNote = args.retryReason
     ? [
         "Retry note:",
@@ -110,34 +98,27 @@ export function buildAiRequest(args: BuildAiRequestArgs): ParseableMessageCreate
     promptSections.push(retryNote);
   }
 
-  return {
-    model: AI_MODEL,
-    max_tokens: MAX_TOKENS,
-    system: SYSTEM_PROMPT,
-    messages: [{ role: "user", content: promptSections.join("\n\n") }],
-    output_config: {
-      format: zodOutputFormat(aiFindingsResponseSchema),
-    },
-  };
+  return { system: SYSTEM_PROMPT, user: promptSections.join("\n\n") };
 }
 
 export async function runAiChecks(args: RunAiChecksArgs): Promise<{
   findings: AiFinding[];
   error?: string;
+  usage?: TokenUsage | undefined;
 }> {
   if (args.checks.length === 0) {
     return { findings: [] };
   }
 
-  const client = args.client ?? createClient(args.apiKey);
-  if (!client) {
+  if (!args.provider) {
     return {
       findings: [],
-      error: "AI checks require an Anthropic client or API key.",
+      error: "AI checks require an AI provider.",
     };
   }
 
   let retryReason: string | undefined;
+  let totalUsage: TokenUsage | undefined;
 
   for (let attempt = 0; attempt < 2; attempt++) {
     const request = buildAiRequest({
@@ -148,9 +129,16 @@ export async function runAiChecks(args: RunAiChecksArgs): Promise<{
       retryReason,
     });
 
-    const response = await requestFindings(client, request);
+    const response = await requestFindings(args.provider, request);
+    if (response.usage) {
+      totalUsage = {
+        inputTokens: (totalUsage?.inputTokens ?? 0) + response.usage.inputTokens,
+        outputTokens: (totalUsage?.outputTokens ?? 0) + response.usage.outputTokens,
+      };
+    }
+
     if (response.kind === "api-error") {
-      return { findings: [], error: `AI checks failed: ${response.message}` };
+      return { findings: [], error: `AI checks failed: ${response.message}`, usage: totalUsage };
     }
 
     if (response.kind === "invalid") {
@@ -161,6 +149,7 @@ export async function runAiChecks(args: RunAiChecksArgs): Promise<{
       return {
         findings: [],
         error: `AI response was invalid after one retry: ${response.message}`,
+        usage: totalUsage,
       };
     }
 
@@ -173,36 +162,38 @@ export async function runAiChecks(args: RunAiChecksArgs): Promise<{
       return {
         findings: [],
         error: `AI response was incomplete after one retry: missing ${selected.missingIds.join(", ")}.`,
+        usage: totalUsage,
       };
     }
 
-    return { findings: selected.findings };
+    return { findings: selected.findings, usage: totalUsage };
   }
 
-  return { findings: [], error: "AI response was invalid after one retry." };
+  return { findings: [], error: "AI response was invalid after one retry.", usage: totalUsage };
 }
 
-function createClient(apiKey?: string): AiClient | undefined {
-  if (!apiKey) return undefined;
-  return new Anthropic({ apiKey });
-}
-
-type RequestFindingsResult =
+type RequestFindingsResult = (
   | { kind: "ok"; findings: AiFindingsResponse }
   | { kind: "invalid"; message: string }
-  | { kind: "api-error"; message: string };
+  | { kind: "api-error"; message: string }
+) & { usage?: TokenUsage | undefined };
 
 async function requestFindings(
-  client: AiClient,
-  request: ParseableMessageCreateParams,
+  provider: AiProvider,
+  request: { system: string; user: string },
 ): Promise<RequestFindingsResult> {
   try {
-    const response = await client.messages.parse(request);
-    const parsed = aiFindingsResponseSchema.safeParse(response.parsed_output);
+    const response = await provider.complete({
+      system: request.system,
+      user: request.user,
+      schema: aiFindingsResponseSchema,
+      maxTokens: MAX_TOKENS,
+    });
+    const parsed = aiFindingsResponseSchema.safeParse(response.output);
     if (!parsed.success) {
-      return { kind: "invalid", message: describeZodError(parsed.error) };
+      return { kind: "invalid", message: describeZodError(parsed.error), usage: response.usage };
     }
-    return { kind: "ok", findings: parsed.data.findings };
+    return { kind: "ok", findings: parsed.data.findings, usage: response.usage };
   } catch (error) {
     const message = oneLine(error instanceof Error ? error.message : String(error));
     return looksLikeStructuredOutputError(message)
@@ -251,9 +242,13 @@ function selectRequestedFindings(
 }
 
 function normalizeFinding(finding: z.infer<typeof aiFindingSchema>): AiFinding {
+  // No clamp here: aiFindingSchema already validates score with .min(0).max(100) —
+  // clamping an already-validated value would only hide a schema bug. scoring.ts
+  // keeps the one real clampScore(), for AiFinding values supplied directly via
+  // AnalyzeDeps.aiFindings, which bypass this schema entirely.
   return {
     checkId: finding.checkId,
-    score: clampScore(finding.score),
+    score: finding.score,
     rationale: finding.rationale,
     evidence: normalizeEvidence(finding.evidence),
   };
@@ -270,108 +265,6 @@ function normalizeEvidence(
   }));
 }
 
-function clampScore(score: number): number {
-  return Math.min(100, Math.max(0, score));
-}
-
 function oneLine(value: string): string {
   return value.replace(/\s+/g, " ").trim();
-}
-
-/* ================================================================ */
-/* Fix Prompt Generation — AI-assisted optimization suggestions     */
-/* ================================================================ */
-
-/** Better model for generating helpful fix prompts — worth the ~2-3x cost for quality. */
-const AI_MODEL_FIX_PROMPT = "claude-sonnet-5";
-
-export const fixPromptResponseSchema = z.object({
-  short: z.string(),
-  full: z.string(),
-});
-
-export type FixPromptResponse = z.infer<typeof fixPromptResponseSchema>;
-
-export interface GenerateFixPromptArgs {
-  report: { readonly fixes: Array<{ readonly text: string; readonly impact: number }> };
-  fileContent: string;
-  fileKind: string;
-  tool: string;
-  apiKey?: string;
-  client?: AiClient;
-}
-
-/**
- * Generate human-friendly fix prompts from a completed report.
- * Produces two formats: short (quick list) and full (detailed prompt for Claude/ChatGPT).
- * No structured output call if there are no fixes — just return empty prompts.
- */
-export async function generateFixPrompt(args: GenerateFixPromptArgs): Promise<{
-  short: string;
-  full: string;
-  error?: string;
-}> {
-  if (!args.report.fixes || args.report.fixes.length === 0) {
-    return { short: "", full: "" };
-  }
-
-  const client = args.client ?? createClient(args.apiKey);
-  if (!client) {
-    return {
-      short: "",
-      full: "",
-      error: "Fix prompt requires an Anthropic client or API key.",
-    };
-  }
-
-  try {
-    const request: ParseableMessageCreateParams = {
-      model: AI_MODEL_FIX_PROMPT,
-      max_tokens: 2048,
-      messages: [
-        {
-          role: "user",
-          content: buildFixPromptRequest(args),
-        },
-      ],
-      output_config: {
-        format: zodOutputFormat(fixPromptResponseSchema),
-      },
-    };
-
-    const response = await client.messages.parse(request);
-    const parsed = fixPromptResponseSchema.safeParse(response.parsed_output);
-
-    if (!parsed.success) {
-      return {
-        short: "",
-        full: "",
-        error: `Invalid fix prompt response: ${parsed.error.issues[0]?.message ?? "unknown"}`,
-      };
-    }
-
-    return { short: parsed.data.short, full: parsed.data.full };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return { short: "", full: "", error: `Fix prompt generation failed: ${message}` };
-  }
-}
-
-function buildFixPromptRequest(args: GenerateFixPromptArgs): string {
-  const fixList = args.report.fixes
-    .map((fix, i) => `${i + 1}. ${fix.text} (impact: ${fix.impact})`)
-    .join("\n");
-
-  return [
-    `File: ${args.fileKind} (${args.tool})`,
-    `Content:\n\`\`\`\n${args.fileContent.slice(0, 500)}\n${args.fileContent.length > 500 ? "...\n" : ""}\`\`\``,
-    "Found issues (ranked by impact):",
-    fixList,
-    "",
-    "Generate two prompts:",
-    '1. "short": A brief 1-2 sentence suggestion: "Here are the issues: [...]. Please fix them."',
-    '2. "full": A complete, ready-to-use prompt for Claude/ChatGPT that includes the full file content and a detailed ask to improve it.',
-    "",
-    'Return only valid JSON matching: {"short": "...", "full": "..."}',
-  ].join("\n");
 }

@@ -148,6 +148,103 @@ describe("buildReport — per-check scoring", () => {
   });
 });
 
+describe("buildReport — evidence redaction", () => {
+  const AWS_KEY_PATTERN = { id: "aws-key", re: "AKIA[0-9A-Z]{16}", hint: "AWS access key id" };
+
+  it("redacts a secret an AI finding quoted in plain text, per security.redactWith", () => {
+    const config = makeConfig({
+      patterns: { secrets: [AWS_KEY_PATTERN] },
+      redactWith: ["secrets"],
+      checks: [
+        {
+          id: "clarity.tone",
+          axis: "clarity",
+          label: "Tone",
+          weight: 1,
+          mode: "ai",
+          appliesTo: [],
+          scoring: { type: "ai" },
+          fix: "improve tone",
+          question: "Is the tone appropriate?",
+        },
+      ],
+    });
+    const aiFindings: AiFinding[] = [
+      {
+        checkId: "clarity.tone",
+        score: 50,
+        rationale: "cites a real key",
+        evidence: [
+          {
+            excerpt: 'the staging key is AKIAIOSFODNN7EXAMPLE, written as "key: ..."',
+            hint: "found key AKIAIOSFODNN7EXAMPLE in the example",
+          },
+        ],
+      },
+    ];
+
+    const report = buildReport({
+      config,
+      file: "a.md",
+      fileKind: "scoped",
+      measurements: [],
+      aiFindings,
+    });
+
+    const evidence = report.checkScores[0]?.evidence?.[0];
+    expect(evidence?.excerpt).not.toContain("AKIAIOSFODNN7EXAMPLE");
+    expect(evidence?.excerpt).toContain("AKIA********");
+    expect(evidence?.hint).not.toContain("AKIAIOSFODNN7EXAMPLE");
+
+    // report.aiFindings is a second, independent path to the same evidence
+    // (e.g. --format json) — it must be redacted too, not just checkScores.
+    const reportedFinding = report.aiFindings[0]?.evidence?.[0];
+    expect(reportedFinding?.excerpt).not.toContain("AKIAIOSFODNN7EXAMPLE");
+    expect(reportedFinding?.excerpt).toContain("AKIA********");
+    expect(reportedFinding?.hint).not.toContain("AKIAIOSFODNN7EXAMPLE");
+
+    // The original input array passed in by the caller must stay untouched.
+    expect(aiFindings[0]?.evidence?.[0]?.excerpt).toContain("AKIAIOSFODNN7EXAMPLE");
+  });
+
+  it("leaves evidence untouched when security.redactWith is not set", () => {
+    const config = makeConfig({
+      patterns: { secrets: [AWS_KEY_PATTERN] },
+      checks: [
+        {
+          id: "clarity.tone",
+          axis: "clarity",
+          label: "Tone",
+          weight: 1,
+          mode: "ai",
+          appliesTo: [],
+          scoring: { type: "ai" },
+          fix: "improve tone",
+          question: "Is the tone appropriate?",
+        },
+      ],
+    });
+    const aiFindings: AiFinding[] = [
+      {
+        checkId: "clarity.tone",
+        score: 50,
+        rationale: "cites a real key",
+        evidence: [{ excerpt: "key: AKIAIOSFODNN7EXAMPLE" }],
+      },
+    ];
+
+    const report = buildReport({
+      config,
+      file: "a.md",
+      fileKind: "scoped",
+      measurements: [],
+      aiFindings,
+    });
+
+    expect(report.checkScores[0]?.evidence?.[0]?.excerpt).toContain("AKIAIOSFODNN7EXAMPLE");
+  });
+});
+
 describe("buildReport — requires-gating", () => {
   it("gates a dependent check off when its requirement is imperfect", () => {
     const config = makeConfig({
@@ -260,6 +357,54 @@ describe("buildReport — axis aggregation", () => {
     expect(clarity?.score).toBe(25);
     expect(clarity?.checkCount).toBe(2);
     expect(clarity?.totalChecks).toBe(3);
+  });
+
+  it("colors each axis from config.grades, not a hardcoded threshold (regression)", () => {
+    // A custom, non-default grades ladder — if the color were hardcoded (the old
+    // reporting/terminal.ts 70/50 copy), this score would still come out green.
+    const config = makeConfig({
+      checks: [makeCheck({ id: "clarity.a", measure: { type: "frontmatterValid" } })],
+      grades: [
+        { min: 95, label: "excellent", color: "green" },
+        { min: 0, label: "everything else is red", color: "red" },
+      ],
+    });
+
+    const report = buildReport({
+      config,
+      file: "a.md",
+      fileKind: "scoped",
+      measurements: [{ checkId: "clarity.a", value: true, applicable: true }], // 100 -> would be green under the default bands
+    });
+
+    // 100 still clears this config's 95 threshold, so it's green here too —
+    // the point is the SAME lookup as the overall grade, not a copy of it.
+    const clarity = report.axisScores.find((a) => a.axis === "clarity");
+    expect(clarity?.color).toBe("green");
+  });
+
+  it("colors an axis amber when its score falls in that band, using the SAME bands as the overall grade", () => {
+    const config = makeConfig({
+      checks: [
+        makeCheck({ id: "clarity.a", measure: { type: "frontmatterValid" } }),
+        makeCheck({ id: "clarity.b", measure: { type: "frontmatterValid" } }),
+      ],
+    });
+
+    const report = buildReport({
+      config,
+      file: "a.md",
+      fileKind: "scoped",
+      measurements: [
+        { checkId: "clarity.a", value: true, applicable: true }, // 100
+        { checkId: "clarity.b", value: false, applicable: true }, // 0 -> mean 50
+      ],
+    });
+
+    const clarity = report.axisScores.find((a) => a.axis === "clarity");
+    // Default fixture grades: [90 green, 70 green, 50 amber, 0 red] — 50 is amber.
+    expect(clarity?.score).toBe(50);
+    expect(clarity?.color).toBe("amber");
   });
 });
 

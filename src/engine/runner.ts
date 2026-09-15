@@ -1,97 +1,91 @@
 /**
  * Sifty — check runner.
  *
- * One file in, one report out. This is the only place that knows the order of
- * operations: load config → detect file kind → measure → ask the model → score.
+ * `analyze()` is the engine's one entry point: config and content in, a
+ * report out. Pure — no file system, no `process`, no network. It DOES take
+ * a pre-loaded `CriteriaConfig` and, optionally, an `AiProvider`, because
+ * loading a config from disk and reaching a real model are composition-root
+ * concerns (see src/cli.ts), not scoring concerns. That is what makes this
+ * function safe to call from a web UI or a test with nothing but an object.
  */
 
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
-
-import { detectFileKind, loadCriteria } from "../config/load.js";
-import type { Check, CriteriaConfig } from "../criteria.types.js";
+import { detectFileKind } from "../criteria/load.js";
+import type { Check, CriteriaConfig } from "../criteria/types.js";
 import type { AiFinding, Measurement, Report } from "../report.types.js";
-import { runAiChecks, type AiClient } from "./ai.js";
+import { runAiChecks } from "./ai-checks.js";
+import type { AiProvider, TokenUsage } from "./ai-provider.js";
 import { measures } from "./measures.js";
 import { buildReport, resolveCheck } from "./scoring.js";
 import { prepareFile, type FileContext } from "./text.js";
 
-export interface AnalyzeOptions {
-  tool: string;
-  preset?: string;
-  configPath?: string;
+export interface AnalyzeInput {
+  /** Used for file-kind detection (unless `fileKind` overrides it) and recorded on the report. */
+  path: string;
+  content: string;
+}
+
+export interface AnalyzeDeps {
+  config: CriteriaConfig;
+  preset?: string | undefined;
   /** Overrides glob detection — useful for testing and for odd file layouts. */
-  fileKind?: string;
-  /** Pre-computed findings (tests, web UI later). When set, no AI call is made. */
-  aiFindings?: AiFinding[];
+  fileKind?: string | undefined;
+  /** Pre-computed findings (tests, web UI later). When set, no provider call is made. */
+  aiFindings?: AiFinding[] | undefined;
   /** How to reach the model for `mode: "ai"` checks. Omitted → mechanical checks only. */
-  ai?: { apiKey?: string | undefined; client?: AiClient | undefined };
+  provider?: AiProvider | undefined;
 }
 
 export interface AnalyzeResult {
   report: Report;
-  context: FileContext;
   /** Checks whose measure threw — the run continues, they become not applicable. */
   failures: { checkId: string; message: string }[];
   /** Set when the AI call was attempted but produced no usable findings. */
   aiError?: string | undefined;
+  /** Token usage of the bundled AI call, when a provider ran and reported it. */
+  usage?: TokenUsage | undefined;
 }
 
-export async function analyzeFile(
-  filePath: string,
-  options: AnalyzeOptions,
-): Promise<AnalyzeResult> {
-  const absolutePath = resolve(process.cwd(), filePath);
-  const raw = readFileSync(absolutePath, "utf8");
-  return analyzeContent(filePath, raw, options);
-}
+export async function analyze(input: AnalyzeInput, deps: AnalyzeDeps): Promise<AnalyzeResult> {
+  if (deps.preset !== undefined) validatePreset(deps.config, deps.preset);
+  const fileKind = deps.fileKind ?? detectFileKind(input.path, deps.config);
+  const context = prepareFile(input.path, input.content);
 
-/** Same as analyzeFile, but for content already in memory (tests, web UI later). */
-export async function analyzeContent(
-  filePath: string,
-  raw: string,
-  options: AnalyzeOptions,
-): Promise<AnalyzeResult> {
-  const config = loadCriteria(options.tool, options.configPath);
-  const fileKind = options.fileKind ?? detectFileKind(filePath, config);
-  const context = prepareFile(filePath, raw);
-
-  const { measurements, failures } = runMechanicalChecks(config, context, fileKind);
-  const ai = await collectAiFindings(config, context, fileKind, options);
+  const { measurements, failures } = runMechanicalChecks(deps.config, context, fileKind);
+  const ai = await collectAiFindings(deps.config, context, fileKind, deps);
 
   const report = buildReport({
-    config,
-    file: filePath,
+    config: deps.config,
+    file: input.path,
     fileKind,
-    preset: options.preset,
+    preset: deps.preset,
     measurements,
     aiFindings: ai.findings,
   });
 
-  return { report, context, failures, aiError: ai.error };
+  return { report, failures, aiError: ai.error, usage: ai.usage };
 }
 
 /**
- * One bundled model call for every pending AI check — or none at all when the
- * caller brought findings along or did not ask for AI checks. The AI layer never
- * throws; a failed call degrades to mechanical-only scoring with a diagnostic.
+ * One bundled provider call for every pending AI check — or none at all when
+ * the caller brought findings along or did not ask for AI checks. The AI
+ * layer never throws; a failed call degrades to mechanical-only scoring
+ * with a diagnostic.
  */
 async function collectAiFindings(
   config: CriteriaConfig,
   ctx: FileContext,
   fileKind: string,
-  options: AnalyzeOptions,
-): Promise<{ findings: AiFinding[]; error?: string | undefined }> {
-  if (options.aiFindings) return { findings: options.aiFindings };
-  if (!options.ai) return { findings: [] };
+  deps: AnalyzeDeps,
+): Promise<{ findings: AiFinding[]; error?: string | undefined; usage?: TokenUsage | undefined }> {
+  if (deps.aiFindings) return { findings: deps.aiFindings };
+  if (!deps.provider) return { findings: [] };
 
   return runAiChecks({
     checks: pendingAiChecks(config, fileKind),
     fileContent: ctx.raw,
     fileKind,
     tool: config.tool,
-    apiKey: options.ai.apiKey,
-    client: options.ai.client,
+    provider: deps.provider,
   });
 }
 
@@ -143,6 +137,17 @@ export function runMechanicalChecks(
   }
 
   return { measurements, failures };
+}
+
+/**
+ * A report that claims a preset it did not actually score with is worse than a
+ * crash — fail loudly here instead of silently falling back to the default
+ * preset's weights inside scoring (see scoring.ts computeOverallScore).
+ */
+export function validatePreset(config: CriteriaConfig, preset: string): void {
+  if (Object.hasOwn(config.presets, preset)) return;
+  const known = Object.keys(config.presets).sort().join(", ");
+  throw new Error(`Unknown preset "${preset}" for tool "${config.tool}". Known presets: ${known}`);
 }
 
 /** Collects the questions for the single bundled AI call. */

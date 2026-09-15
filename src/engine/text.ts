@@ -7,6 +7,9 @@
 
 import matter from "gray-matter";
 
+import type { PatternDef } from "../criteria/types.js";
+import type { Evidence } from "../report.types.js";
+
 export interface Block {
   /** 1-based line where the block starts. */
   line: number;
@@ -32,11 +35,10 @@ export interface FileContext {
   /** Body without code fences, inline code and URLs — this is what humans read. */
   prose: string;
   proseWords: string[];
-  tokenEstimate: number;
   hasCodeFence: boolean;
 }
 
-export function prepareFile(path: string, raw: string, charsPerToken = 4): FileContext {
+export function prepareFile(path: string, raw: string): FileContext {
   let frontmatterValid = true;
   let frontmatterError: string | undefined;
   let data: Record<string, unknown> = {};
@@ -74,7 +76,6 @@ export function prepareFile(path: string, raw: string, charsPerToken = 4): FileC
     bodyOffset,
     prose,
     proseWords: words(prose),
-    tokenEstimate: Math.ceil(raw.length / charsPerToken),
     hasCodeFence: /^\s*```/m.test(body),
   };
 }
@@ -154,6 +155,37 @@ export function excerptAt(text: string, index: number, length = 60, matchLength 
 export function redact(value: string, keep = 4): string {
   if (value.length <= keep) return "*".repeat(value.length);
   return `${value.slice(0, keep)}${"*".repeat(Math.min(12, value.length - keep))}`;
+}
+
+/**
+ * Masks every match of the given patterns inside `text`, leaving everything
+ * else untouched — unlike `redact()`, which masks its whole input. Used to
+ * redact evidence that was NOT built from a raw-offset excerpt (see
+ * `excerptAt`) and so could not be pre-redacted at the source: AI findings
+ * quote the file directly, so their excerpt/hint text can still contain a
+ * secret in plain text when it reaches the report.
+ */
+export function redactMatches(text: string, patterns: PatternDef[]): string {
+  let result = text;
+  for (const pattern of patterns) {
+    const flags = pattern.flags?.includes("g") ? pattern.flags : `${pattern.flags ?? ""}g`;
+    const re = new RegExp(pattern.re, flags);
+    result = result.replace(re, (match) => redact(match));
+  }
+  return result;
+}
+
+/** Applies `redactMatches` to every excerpt/hint in an Evidence array. */
+export function redactEvidence(
+  evidence: Evidence[] | undefined,
+  patterns: PatternDef[],
+): Evidence[] | undefined {
+  if (!evidence || patterns.length === 0) return evidence;
+  return evidence.map((entry) => ({
+    ...entry,
+    excerpt: entry.excerpt !== undefined ? redactMatches(entry.excerpt, patterns) : entry.excerpt,
+    hint: entry.hint !== undefined ? redactMatches(entry.hint, patterns) : entry.hint,
+  }));
 }
 
 /* ------------------------------------------------------------------ *

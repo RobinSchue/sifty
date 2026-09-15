@@ -1,8 +1,14 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
 import chalk from "chalk";
 import { beforeAll, describe, expect, it } from "vitest";
 
+import { loadCriteria } from "../criteria/load.js";
+import { analyze } from "../engine/runner.js";
+import { measures } from "../engine/measures.js";
 import type { Report } from "../report.types.js";
-import { formatReport } from "./format.js";
+import { formatTerminal } from "./terminal.js";
 
 beforeAll(() => {
   chalk.level = 0;
@@ -19,17 +25,46 @@ function baseReport(overrides: Partial<Report> = {}): Report {
     aiFindings: [],
     checkScores: [],
     axisScores: [
-      { axis: "clarity", label: "Clarity & Precision", score: 90, checkCount: 3, totalChecks: 3 },
-      { axis: "structure", label: "Structure & Format", score: 80, checkCount: 2, totalChecks: 2 },
+      {
+        axis: "clarity",
+        label: "Clarity & Precision",
+        score: 90,
+        checkCount: 3,
+        totalChecks: 3,
+        color: "green",
+      },
+      {
+        axis: "structure",
+        label: "Structure & Format",
+        score: 80,
+        checkCount: 2,
+        totalChecks: 2,
+        color: "green",
+      },
       {
         axis: "completeness",
         label: "Completeness",
         score: 0,
         checkCount: 0,
         totalChecks: 5,
+        color: "red",
       },
-      { axis: "cost", label: "Cost Efficiency", score: 70, checkCount: 1, totalChecks: 1 },
-      { axis: "security", label: "Security", score: 100, checkCount: 1, totalChecks: 1 },
+      {
+        axis: "cost",
+        label: "Cost Efficiency",
+        score: 70,
+        checkCount: 1,
+        totalChecks: 1,
+        color: "green",
+      },
+      {
+        axis: "security",
+        label: "Security",
+        score: 100,
+        checkCount: 1,
+        totalChecks: 1,
+        color: "green",
+      },
     ],
     overallScore: 85,
     grade: { label: "good", color: "green" },
@@ -39,9 +74,9 @@ function baseReport(overrides: Partial<Report> = {}): Report {
   };
 }
 
-describe("formatReport", () => {
+describe("formatTerminal", () => {
   it("includes the file, tool, kind, preset and criteria header", () => {
-    const output = formatReport(baseReport());
+    const output = formatTerminal(baseReport());
     expect(output).toContain("File: a.instructions.md");
     expect(output).toContain("Tool: copilot");
     expect(output).toContain("Kind: scoped");
@@ -50,18 +85,18 @@ describe("formatReport", () => {
   });
 
   it("shows the overall score and grade", () => {
-    const output = formatReport(baseReport());
+    const output = formatTerminal(baseReport());
     expect(output).toContain("Overall score: 85/100");
     expect(output).toContain("good");
   });
 
   it("omits the blocker section when there are no blockers", () => {
-    const output = formatReport(baseReport());
+    const output = formatTerminal(baseReport());
     expect(output).not.toContain("BLOCKER");
   });
 
   it("shows a blocker section with its evidence when blockers are present", () => {
-    const output = formatReport(
+    const output = formatTerminal(
       baseReport({
         blockers: [
           {
@@ -79,21 +114,21 @@ describe("formatReport", () => {
   });
 
   it("shows a cap note only when cappedFrom is set", () => {
-    const uncapped = formatReport(baseReport());
+    const uncapped = formatTerminal(baseReport());
     expect(uncapped).not.toContain("capped from");
 
-    const capped = formatReport(baseReport({ overallScore: 40, cappedFrom: 68 }));
+    const capped = formatTerminal(baseReport({ overallScore: 40, cappedFrom: 68 }));
     expect(capped).toContain("capped from 68");
   });
 
   it("shows n/a with coverage note for an axis with zero contributing checks", () => {
-    const output = formatReport(baseReport());
+    const output = formatTerminal(baseReport());
     expect(output).toContain("n/a");
     expect(output).toContain("(0/5 checks)");
   });
 
   it("shows a coverage note for a partially-covered axis but not a fully-covered one", () => {
-    const output = formatReport(
+    const output = formatTerminal(
       baseReport({
         axisScores: [
           {
@@ -102,6 +137,7 @@ describe("formatReport", () => {
             score: 80,
             checkCount: 2,
             totalChecks: 5,
+            color: "green",
           },
         ],
       }),
@@ -110,7 +146,7 @@ describe("formatReport", () => {
   });
 
   it("prints the fix list sorted as given, with severity tags", () => {
-    const output = formatReport(
+    const output = formatTerminal(
       baseReport({
         fixes: [
           {
@@ -144,7 +180,40 @@ describe("formatReport", () => {
   });
 
   it("shows a success message when there are no fixes", () => {
-    const output = formatReport(baseReport({ fixes: [] }));
+    const output = formatTerminal(baseReport({ fixes: [] }));
     expect(output).toContain("No fixes needed");
   });
+});
+
+/**
+ * Golden terminal snapshots (part of the Wave 0 safety net, see
+ * src/engine/golden.test.ts). Same three fixtures, real config/copilot.json,
+ * mechanical-only (deterministic, no AI call) — pins the exact text a user
+ * sees, not just the underlying numbers.
+ */
+describe("formatTerminal — golden snapshots", () => {
+  const GOLDEN_DIR = resolve(process.cwd(), "src/testing/golden");
+  const config = loadCriteria("copilot", undefined, { measureTypes: Object.keys(measures) });
+
+  const fixtures: { name: string; file: string; virtualPath: string }[] = [
+    { name: "good", file: "good.instructions.md", virtualPath: "example.instructions.md" },
+    {
+      name: "repo-wide",
+      file: "repo-wide.copilot-instructions.md",
+      virtualPath: ".github/copilot-instructions.md",
+    },
+    { name: "blocker", file: "blocker.instructions.md", virtualPath: "blocker.instructions.md" },
+  ];
+
+  for (const fixture of fixtures) {
+    it(`renders ${fixture.name} (balanced preset, no AI) — snapshot`, async () => {
+      const content = readFileSync(resolve(GOLDEN_DIR, fixture.file), "utf8");
+      const result = await analyze(
+        { path: fixture.virtualPath, content },
+        { config, preset: "balanced" },
+      );
+
+      expect(formatTerminal(result.report)).toMatchSnapshot();
+    });
+  }
 });

@@ -1,0 +1,320 @@
+[
+  {
+    "preset": "balanced",
+    "withAi": false,
+    "overallScore": 86,
+    "grade": {
+      "label": "strong",
+      "color": "green"
+    },
+    "axisScores": [
+      {
+        "axis": "clarity",
+        "score": 100,
+        "checkCount": 3,
+        "totalChecks": 5,
+        "color": "green"
+      },
+      {
+        "axis": "structure",
+        "score": 100,
+        "checkCount": 2,
+        "totalChecks": 2,
+        "color": "green"
+      },
+      {
+        "axis": "completeness",
+        "score": 40,
+        "checkCount": 2,
+        "totalChecks": 5,
+        "color": "red"
+      },
+      {
+        "axis": "cost",
+        "score": 92,
+        "checkCount": 4,
+        "totalChecks": 4,
+        "color": "green"
+      },
+      {
+        "axis": "security",
+        "score": 100,
+        "checkCount": 4,
+        "totalChecks": 4,
+        "color": "green"
+      }
+    ],
+    "blockers": [],
+    "fixes": ["completeness.examples", "cost.file-length"],
+    "fileKind": "repo-wide"
+  },
+  {
+    "preset": "balanced",
+    "withAi": true,
+    "overallScore": 88,
+    "grade": {
+      "label": "strong",
+      "color": "green"
+    },
+    "axisScores": [
+      {
+        "axis": "clarity",
+        "score": 90,
+        "checkCount": 5,
+        "totalChecks": 5,
+        "color": "green"
+      },
+      {
+        "axis": "structure",
+        "score": 100,
+        "checkCount": 2,
+        "totalChecks": 2,
+        "color": "green"
+      },
+      {
+        "axis": "completeness",
+        "score": 58,
+        "checkCount": 5,
+        "totalChecks": 5,
+        "color": "amber"
+      },
+      {
+        "axis": "cost",
+        "score": 92,
+        "checkCount": 4,
+        "totalChecks": 4,
+        "color": "green"
+      },
+      {
+        "axis": "security",
+        "score": 100,
+        "checkCount": 4,
+        "totalChecks": 4,
+        "color": "green"
+      }
+    ],
+    "blockers": [],
+    "fixes": [
+      "completeness.examples",
+      "completeness.project-context",
+      "clarity.concrete-instructions",
+      "cost.file-length",
+      "completeness.output-constraint-sensible",
+      "completeness.scope-statement",
+      "clarity.contradictions"
+    ],
+    "fileKind": "repo-wide"
+  },
+  {
+    "preset": "cost",
+    "withAi": false,
+    "overallScore": 90,
+    "grade": {
+      "label": "strong",
+      "color": "green"
+    },
+    "axisScores": [
+      {
+        "axis": "clarity",
+        "score": 100,
+        "checkCount": 3,
+        "totalChecks": 5,
+        "color": "green"
+      },
+      {
+        "axis": "structure",
+        "score": 100,
+        "checkCount": 2,
+        "totalChecks": 2,
+        "color": "green"
+      },
+      {
+        "axis": "completeness",
+        "score": 40,
+        "checkCount": 2,
+        "totalChecks": 5,
+        "color": "red"
+      },
+      {
+        "axis": "cost",
+        "score": 92,
+        "checkCount": 4,
+        "totalChecks": 4,
+        "color": "green"
+      },
+      {
+        "axis": "security",
+        "score": 100,
+        "checkCount": 4,
+        "totalChecks": 4,
+        "color": "green"
+      }
+    ],
+    "blockers": [],
+    "fixes": ["completeness.examples", "cost.file-length"],
+    "fileKind": "repo-wide"
+  },
+  {
+    "preset": "cost",
+    "withAi": true,
+    "overallScore": 90,
+    "grade": {
+      "label": "strong",
+      "color": "green"
+    },
+    "axisScores": [
+      {
+        "axis": "clarity",
+        "score": 90,
+        "checkCount": 5,
+        "totalChecks": 5,
+        "color": "green"
+      },
+      {
+        "axis": "structure",
+        "score": 100,
+        "checkCount": 2,
+        "totalChecks": 2,
+        "color": "green"
+      },
+      {
+        "axis": "completeness",
+        "score": 58,
+        "checkCount": 5,
+        "totalChecks": 5,
+        "color": "amber"
+      },
+      {
+        "axis": "cost",
+        "score": 92,
+        "checkCount": 4,
+        "totalChecks": 4,
+        "color": "green"
+      },
+      {
+        "axis": "security",
+        "score": 100,
+        "checkCount": 4,
+        "totalChecks": 4,
+        "color": "green"
+      }
+    ],
+    "blockers": [],
+    "fixes": [
+      "completeness.examples",
+      "completeness.project-context",
+      "clarity.concrete-instructions",
+      "cost.file-length",
+      "completeness.output-constraint-sensible",
+      "completeness.scope-statement",
+      "clarity.contradictions"
+    ],
+    "fileKind": "repo-wide"
+  },
+  {
+    "preset": "security",
+    "withAi": false,
+    "overallScore": 90,
+    "grade": {
+      "label": "strong",
+      "color": "green"
+    },
+    "axisScores": [
+      {
+        "axis": "clarity",
+        "score": 100,
+        "checkCount": 3,
+        "totalChecks": 5,
+        "color": "green"
+      },
+      {
+        "axis": "structure",
+        "score": 100,
+        "checkCount": 2,
+        "totalChecks": 2,
+        "color": "green"
+      },
+      {
+        "axis": "completeness",
+        "score": 40,
+        "checkCount": 2,
+        "totalChecks": 5,
+        "color": "red"
+      },
+      {
+        "axis": "cost",
+        "score": 92,
+        "checkCount": 4,
+        "totalChecks": 4,
+        "color": "green"
+      },
+      {
+        "axis": "security",
+        "score": 100,
+        "checkCount": 4,
+        "totalChecks": 4,
+        "color": "green"
+      }
+    ],
+    "blockers": [],
+    "fixes": ["completeness.examples", "cost.file-length"],
+    "fileKind": "repo-wide"
+  },
+  {
+    "preset": "security",
+    "withAi": true,
+    "overallScore": 91,
+    "grade": {
+      "label": "strong",
+      "color": "green"
+    },
+    "axisScores": [
+      {
+        "axis": "clarity",
+        "score": 90,
+        "checkCount": 5,
+        "totalChecks": 5,
+        "color": "green"
+      },
+      {
+        "axis": "structure",
+        "score": 100,
+        "checkCount": 2,
+        "totalChecks": 2,
+        "color": "green"
+      },
+      {
+        "axis": "completeness",
+        "score": 58,
+        "checkCount": 5,
+        "totalChecks": 5,
+        "color": "amber"
+      },
+      {
+        "axis": "cost",
+        "score": 92,
+        "checkCount": 4,
+        "totalChecks": 4,
+        "color": "green"
+      },
+      {
+        "axis": "security",
+        "score": 100,
+        "checkCount": 4,
+        "totalChecks": 4,
+        "color": "green"
+      }
+    ],
+    "blockers": [],
+    "fixes": [
+      "completeness.examples",
+      "completeness.project-context",
+      "clarity.concrete-instructions",
+      "cost.file-length",
+      "completeness.output-constraint-sensible",
+      "completeness.scope-statement",
+      "clarity.contradictions"
+    ],
+    "fileKind": "repo-wide"
+  }
+]
