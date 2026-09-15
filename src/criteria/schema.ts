@@ -88,7 +88,7 @@ const bandSchema: z.ZodType<Band> = z.object({
 });
 
 const scoringSchema: z.ZodType<Scoring> = z.discriminatedUnion("type", [
-  z.object({ type: z.literal("binary"), failScore: z.number().optional() }),
+  z.object({ type: z.literal("binary"), failScore: z.number().min(0).max(100).optional() }),
   z.object({ type: z.literal("bands"), bands: z.array(bandSchema).min(1) }),
   z.object({
     type: z.literal("penalty"),
