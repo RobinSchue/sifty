@@ -51,11 +51,26 @@ export default tseslint.config(
   },
   {
     // R2: the engine is pure — no I/O, no CLI parsing, no terminal styling,
-    // no direct process access (process.env/cwd/exitCode).
+    // no direct process access (process.env/cwd/exitCode). It also must not
+    // reach past the AiProvider port into a concrete provider module.
     files: ["src/engine/**/*.ts"],
     ignores: ["src/engine/**/*.test.ts"],
     rules: {
-      "no-restricted-imports": ["error", { patterns: [SDK_BAN, NODE_IO_BAN, CLI_ONLY_BAN] }],
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            SDK_BAN,
+            NODE_IO_BAN,
+            CLI_ONLY_BAN,
+            {
+              group: ["../providers/*"],
+              message:
+                "src/engine/** must depend on the AiProvider port (ai-provider.ts), not a concrete provider module.",
+            },
+          ],
+        },
+      ],
       "no-restricted-properties": [
         "error",
         {
