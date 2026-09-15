@@ -32,9 +32,10 @@ sees both "your overall score is 40" and "uncapped, it would have been 90".
 
 This is deliberately a cap, not a zero-out: a file with a blocker still
 gets its real per-axis scores and its real fix list, sorted by impact
-(`weight * (100 - score)`) — a blocker check's own weight still drives it
-to the top of that list, but the OTHER findings are not hidden just because
-one thing is broken. `security.reportBlockersSeparately` additionally
+(`weight * (100 - score)`) the same way as every other finding — a
+blocker's weight and its gap from 100 place it in that ordering like any
+check, but the OTHER findings are not hidden just because one thing is
+broken. `security.reportBlockersSeparately` additionally
 surfaces blockers as their own section above the score, so the reason for
 a capped score is never just an axis label with a low number.
 
