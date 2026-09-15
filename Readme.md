@@ -81,9 +81,9 @@ sifty check <file> --tool copilot --generate-fix-prompt
 This generates two formats:
 
 - **`--fix-prompt short`**: Brief suggestion ("these issues found: [...]. Please fix.") — good for quick copy-paste
-- **`--fix-prompt full`** (default when both asked): Complete prompt with your file and detailed context, ready to paste into Claude/ChatGPT
+- **`--fix-prompt full`** (default): Complete prompt with your full file content and detailed context, ready to paste into Claude/ChatGPT
 
-Uses `claude-sonnet-5` for better prompt quality (~$0.01–0.02 per file extra cost). If no key is set or the API fails, the fix prompt is skipped silently.
+Uses `claude-sonnet-5` for better prompt quality (~$0.01–0.02 per file extra cost). If no key is set or the API fails, the fix prompt is skipped silently. `--no-ai` disables it too — the fix prompt is AI-generated like the bundled checks, so it follows the same flag instead of making its own request regardless.
 
 ## What it rates
 

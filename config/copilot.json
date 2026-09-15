@@ -624,6 +624,7 @@
 
   "security": {
     "blockerCapsOverallAt": 40,
-    "reportBlockersSeparately": true
+    "reportBlockersSeparately": true,
+    "redactWith": ["secrets"]
   }
 }

@@ -364,7 +364,10 @@ function buildFixPromptRequest(args: GenerateFixPromptArgs): string {
 
   return [
     `File: ${args.fileKind} (${args.tool})`,
-    `Content:\n\`\`\`\n${args.fileContent.slice(0, 500)}\n${args.fileContent.length > 500 ? "...\n" : ""}\`\`\``,
+    // Full content, not a truncated excerpt — the "full" style below is documented
+    // to include the whole file, and a prompt for Claude/ChatGPT that quotes only
+    // the first 500 characters would generate fixes for text the model never saw.
+    `Content:\n\`\`\`\n${args.fileContent}\n\`\`\``,
     "Found issues (ranked by impact):",
     fixList,
     "",

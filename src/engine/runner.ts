@@ -53,6 +53,7 @@ export async function analyzeContent(
   options: AnalyzeOptions,
 ): Promise<AnalyzeResult> {
   const config = loadCriteria(options.tool, options.configPath);
+  if (options.preset !== undefined) validatePreset(config, options.preset);
   const fileKind = options.fileKind ?? detectFileKind(filePath, config);
   const context = prepareFile(filePath, raw);
 
@@ -143,6 +144,17 @@ export function runMechanicalChecks(
   }
 
   return { measurements, failures };
+}
+
+/**
+ * A report that claims a preset it did not actually score with is worse than a
+ * crash — fail loudly here instead of silently falling back to the default
+ * preset's weights inside scoring (see scoring.ts computeOverallScore).
+ */
+export function validatePreset(config: CriteriaConfig, preset: string): void {
+  if (config.presets[preset]) return;
+  const known = Object.keys(config.presets).sort().join(", ");
+  throw new Error(`Unknown preset "${preset}" for tool "${config.tool}". Known presets: ${known}`);
 }
 
 /** Collects the questions for the single bundled AI call. */

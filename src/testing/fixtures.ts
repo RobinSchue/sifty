@@ -59,6 +59,7 @@ export interface MakeConfigOptions {
   presets?: Record<string, Preset>;
   defaultPreset?: string;
   blockerCapsOverallAt?: number;
+  redactWith?: string[];
 }
 
 /** A complete, minimal, valid CriteriaConfig — override only what a test needs. */
@@ -82,6 +83,7 @@ export function makeConfig(options: MakeConfigOptions = {}): CriteriaConfig {
     security: {
       blockerCapsOverallAt: options.blockerCapsOverallAt ?? 40,
       reportBlockersSeparately: true,
+      ...(options.redactWith ? { redactWith: options.redactWith } : {}),
     },
   };
 }

@@ -148,6 +148,93 @@ describe("buildReport — per-check scoring", () => {
   });
 });
 
+describe("buildReport — evidence redaction", () => {
+  const AWS_KEY_PATTERN = { id: "aws-key", re: "AKIA[0-9A-Z]{16}", hint: "AWS access key id" };
+
+  it("redacts a secret an AI finding quoted in plain text, per security.redactWith", () => {
+    const config = makeConfig({
+      patterns: { secrets: [AWS_KEY_PATTERN] },
+      redactWith: ["secrets"],
+      checks: [
+        {
+          id: "clarity.tone",
+          axis: "clarity",
+          label: "Tone",
+          weight: 1,
+          mode: "ai",
+          appliesTo: [],
+          scoring: { type: "ai" },
+          fix: "improve tone",
+          question: "Is the tone appropriate?",
+        },
+      ],
+    });
+    const aiFindings: AiFinding[] = [
+      {
+        checkId: "clarity.tone",
+        score: 50,
+        rationale: "cites a real key",
+        evidence: [
+          {
+            excerpt: 'the staging key is AKIAIOSFODNN7EXAMPLE, written as "key: ..."',
+            hint: "found key AKIAIOSFODNN7EXAMPLE in the example",
+          },
+        ],
+      },
+    ];
+
+    const report = buildReport({
+      config,
+      file: "a.md",
+      fileKind: "scoped",
+      measurements: [],
+      aiFindings,
+    });
+
+    const evidence = report.checkScores[0]?.evidence?.[0];
+    expect(evidence?.excerpt).not.toContain("AKIAIOSFODNN7EXAMPLE");
+    expect(evidence?.excerpt).toContain("AKIA********");
+    expect(evidence?.hint).not.toContain("AKIAIOSFODNN7EXAMPLE");
+  });
+
+  it("leaves evidence untouched when security.redactWith is not set", () => {
+    const config = makeConfig({
+      patterns: { secrets: [AWS_KEY_PATTERN] },
+      checks: [
+        {
+          id: "clarity.tone",
+          axis: "clarity",
+          label: "Tone",
+          weight: 1,
+          mode: "ai",
+          appliesTo: [],
+          scoring: { type: "ai" },
+          fix: "improve tone",
+          question: "Is the tone appropriate?",
+        },
+      ],
+    });
+    const aiFindings: AiFinding[] = [
+      {
+        checkId: "clarity.tone",
+        score: 50,
+        rationale: "cites a real key",
+        evidence: [{ excerpt: "key: AKIAIOSFODNN7EXAMPLE" }],
+      },
+    ];
+
+    const report = buildReport({
+      config,
+      file: "a.md",
+      fileKind: "scoped",
+      measurements: [],
+      aiFindings,
+    });
+
+    expect(report.checkScores[0]?.evidence?.[0]?.excerpt).toContain("AKIAIOSFODNN7EXAMPLE");
+  });
+});
+
 describe("buildReport — requires-gating", () => {
   it("gates a dependent check off when its requirement is imperfect", () => {
     const config = makeConfig({

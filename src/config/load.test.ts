@@ -172,6 +172,21 @@ describe("validateCriteria", () => {
     });
     expect(() => validateCriteria(config, "test")).toThrow(/unknown word set/);
   });
+
+  it("rejects security.redactWith referencing an unknown pattern set", () => {
+    const config = makeConfig({ redactWith: ["missing-set"] });
+    expect(() => validateCriteria(config, "test")).toThrow(
+      /redactWith references unknown pattern set "missing-set"/,
+    );
+  });
+
+  it("accepts security.redactWith referencing a real pattern set", () => {
+    const config = makeConfig({
+      patterns: { secrets: [{ id: "x", re: "x", hint: "x" }] },
+      redactWith: ["secrets"],
+    });
+    expect(() => validateCriteria(config, "test")).not.toThrow();
+  });
 });
 
 describe("detectFileKind", () => {

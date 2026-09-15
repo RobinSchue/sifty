@@ -7,7 +7,8 @@
  * sorted by impact.
  */
 
-import type { Check, CriteriaConfig, Scoring } from "../criteria.types.js";
+import { redactEvidence } from "./text.js";
+import type { Check, CriteriaConfig, PatternDef, Scoring } from "../criteria.types.js";
 import type {
   AiFinding,
   AxisScore,
@@ -67,7 +68,7 @@ export function buildReport(args: BuildReportArgs): Report {
     }
   }
 
-  const resolved = applyRequiresGating(relevantChecks, raw);
+  const resolved = redactAllEvidence(args.config, applyRequiresGating(relevantChecks, raw));
   const axisScores = aggregateAxisScores(args.config, resolved);
   const blockers = findBlockers(resolved);
 
@@ -200,6 +201,34 @@ function applyRequiresGating(
 }
 
 /* ------------------------------------------------------------------ *
+ * Evidence redaction
+ *
+ * Applied once, here, after gating and before anything reads `.evidence` —
+ * checkScores, blockers and the fix list all derive from this same map, so
+ * this is the one place that guarantees every one of them sees redacted
+ * text regardless of whether it came from a measure or the model.
+ * ------------------------------------------------------------------ */
+
+function redactAllEvidence(
+  config: CriteriaConfig,
+  resolved: Map<string, RawOutcome>,
+): Map<string, RawOutcome> {
+  const patterns = collectRedactionPatterns(config);
+  if (patterns.length === 0) return resolved;
+
+  const out = new Map<string, RawOutcome>();
+  for (const [id, outcome] of resolved) {
+    out.set(id, { ...outcome, evidence: redactEvidence(outcome.evidence, patterns) });
+  }
+  return out;
+}
+
+function collectRedactionPatterns(config: CriteriaConfig): PatternDef[] {
+  const setIds = config.security.redactWith ?? [];
+  return setIds.flatMap((id) => config.sets.patterns[id] ?? []);
+}
+
+/* ------------------------------------------------------------------ *
  * Aggregation
  * ------------------------------------------------------------------ */
 
@@ -231,7 +260,10 @@ function computeOverallScore(
   preset: string,
   axisScores: AxisScore[],
 ): number {
-  const weights = (config.presets[preset] ?? config.presets[config.defaultPreset])?.weights;
+  // No fallback to the default preset's weights: an unknown preset name must fail
+  // loudly at the boundary (see runner.ts) — silently scoring with different
+  // weights than the report claims to use is worse than a crash.
+  const weights = config.presets[preset]?.weights;
   if (!weights) return 0;
 
   // An axis with zero contributing checks (e.g. AI layer not connected, or every

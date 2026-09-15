@@ -131,6 +131,12 @@ export function validateCriteria(config: CriteriaConfig, source: string): void {
     }
   }
 
+  for (const setId of config.security?.redactWith ?? []) {
+    if (!config.sets?.patterns?.[setId]) {
+      fail(`security.redactWith references unknown pattern set "${setId}"`);
+    }
+  }
+
   if (problems.length > 0) {
     throw new Error(`Invalid criteria config (${source}):\n  - ${problems.join("\n  - ")}`);
   }

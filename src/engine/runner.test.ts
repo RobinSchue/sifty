@@ -5,10 +5,16 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { AiClient } from "./ai.js";
-import { analyzeContent, analyzeFile, pendingAiChecks, runMechanicalChecks } from "./runner.js";
+import {
+  analyzeContent,
+  analyzeFile,
+  pendingAiChecks,
+  runMechanicalChecks,
+  validatePreset,
+} from "./runner.js";
 import { prepareFile } from "./text.js";
 import type { Check } from "../criteria.types.js";
-import { makeCheck, makeConfig } from "../testing/fixtures.js";
+import { makeCheck, makeConfig, makePreset } from "../testing/fixtures.js";
 
 const tempDirs: string[] = [];
 
@@ -292,6 +298,35 @@ describe("analyzeFile", () => {
 
     expect(result.report.file).toBe(filePath);
     expect(result.report.checkScores[0]?.score).toBe(100);
+  });
+});
+
+describe("validatePreset", () => {
+  it("accepts a preset that exists on the config", () => {
+    const config = makeConfig({ presets: { balanced: makePreset(), cost: makePreset() } });
+    expect(() => validatePreset(config, "cost")).not.toThrow();
+  });
+
+  it("throws for an unknown preset, listing the known ones", () => {
+    const config = makeConfig({ presets: { balanced: makePreset(), cost: makePreset() } });
+    expect(() => validatePreset(config, "bogus")).toThrow(/Unknown preset "bogus".*balanced, cost/);
+  });
+});
+
+describe("analyzeContent with an unknown preset", () => {
+  it("rejects the run instead of silently scoring with the default preset's weights", async () => {
+    const config = makeConfig({
+      checks: [makeCheck({ id: "clarity.frontmatter", measure: { type: "frontmatterValid" } })],
+    });
+    const { configPath } = writeTempTree(JSON.stringify(config), "a.instructions.md", "irrelevant");
+
+    await expect(
+      analyzeContent("a.md", "---\napplyTo: '**'\n---\nbody\n", {
+        tool: "ignored",
+        configPath,
+        preset: "bogus",
+      }),
+    ).rejects.toThrow(/Unknown preset "bogus"/);
   });
 });
 

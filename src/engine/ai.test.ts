@@ -264,6 +264,28 @@ describe("generateFixPrompt", () => {
     expect(error).toBeUndefined();
   });
 
+  it("sends the full file content, not a truncated excerpt (regression)", async () => {
+    const longContent = `# Title\n${"word ".repeat(200)}`; // > 500 chars
+    expect(longContent.length).toBeGreaterThan(500);
+
+    const { client, parse } = makeClient(async () => ({
+      parsed_output: { short: "s", full: "f" },
+    }));
+
+    await generateFixPrompt({
+      report: { fixes: [{ text: "Fix this", impact: 10 }] },
+      fileContent: longContent,
+      fileKind: "scoped",
+      tool: "copilot",
+      client,
+    });
+
+    const request = parse.mock.calls[0]?.[0];
+    const sentContent = String(request?.messages[0]?.content);
+    expect(sentContent).toContain(longContent);
+    expect(sentContent).not.toContain("...\n```");
+  });
+
   it("returns error when client throws", async () => {
     const { client } = makeClient(async () => {
       throw new Error("503 Service Unavailable");

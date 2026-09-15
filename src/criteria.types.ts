@@ -138,4 +138,12 @@ export interface SecurityPolicy {
   blockerCapsOverallAt: number;
   /** Also surface blockers as a separate warning above the report. */
   reportBlockersSeparately: boolean;
+  /**
+   * Pattern set ids (keys into `sets.patterns`) run over every Evidence's
+   * `excerpt` and `hint` before it reaches the report — mechanical evidence is
+   * usually pre-redacted at the source already (see measures.ts patternHits),
+   * but AI findings quote the file directly and are not. Applied once, here,
+   * regardless of source. Omit or leave empty to redact nothing.
+   */
+  redactWith?: string[];
 }

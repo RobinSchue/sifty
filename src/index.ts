@@ -1,8 +1,11 @@
 #!/usr/bin/env node
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
 import chalk from "chalk";
-import { Command } from "commander";
+import { Command, Option } from "commander";
 import { config as loadEnv } from "dotenv";
-import { existsSync } from "node:fs";
 
 import { analyzeFile } from "./engine/runner.js";
 import { generateFixPrompt } from "./engine/ai.js";
@@ -11,6 +14,13 @@ import { formatReport } from "./reporting/format.js";
 // `quiet` — dotenv 17 otherwise prints an info line to stdout, right into the report.
 loadEnv({ quiet: true });
 
+// Works in dev (src/index.ts) and after a build (dist/index.js) — both sit one
+// directory below the package root, same as config/load.ts's findConfigDir().
+const HERE = dirname(fileURLToPath(import.meta.url));
+const PACKAGE_JSON = JSON.parse(readFileSync(resolve(HERE, "../package.json"), "utf8")) as {
+  version: string;
+};
+
 const program = new Command();
 
 program
@@ -18,7 +28,7 @@ program
   .description(
     "Evaluates instruction, skill, and prompt files for AI tools (Copilot, Claude, ...).",
   )
-  .version("0.1.0");
+  .version(PACKAGE_JSON.version);
 
 program
   .command("check")
@@ -28,11 +38,17 @@ program
   .option("-p, --preset <preset>", "Scoring preset (e.g. balanced, cost, security)")
   .option("-c, --config <path>", "Path to a custom criteria config, bypassing config/<tool>.json")
   .option("--no-ai", "Skip the AI checks and score mechanically only")
-  .option("--generate-fix-prompt", "Generate AI-driven optimization prompts for the fixes found")
   .option(
-    "--fix-prompt <style>",
-    "Fix prompt style: short (brief list) or full (complete prompt). Default: full",
-    "full",
+    "--generate-fix-prompt",
+    "Generate an AI-driven optimization prompt for the fixes found (requires AI checks; ignored with --no-ai)",
+  )
+  .addOption(
+    new Option(
+      "--fix-prompt <style>",
+      "Fix prompt style: short (brief list) or full (complete prompt)",
+    )
+      .choices(["short", "full"])
+      .default("full"),
   )
   .action(
     async (
@@ -43,7 +59,7 @@ program
         config?: string;
         ai: boolean;
         generateFixPrompt?: boolean;
-        fixPrompt: string;
+        fixPrompt: "short" | "full";
       },
     ) => {
       if (!existsSync(file)) {
@@ -52,6 +68,7 @@ program
         return;
       }
 
+      // Read once, reused for both the bundled AI checks and the fix-prompt call below.
       const apiKey = process.env["ANTHROPIC_API_KEY"];
       if (options.ai && !apiKey) {
         console.error(
@@ -85,8 +102,9 @@ program
         console.error(chalk.dim(`  (${failure.checkId}: ${failure.message} — skipped)`));
       }
 
-      if (options.generateFixPrompt) {
-        const apiKey = process.env["ANTHROPIC_API_KEY"];
+      // --no-ai means no AI call at all, full stop — the fix prompt is AI-generated
+      // too, so it follows the same flag instead of quietly making its own request.
+      if (options.generateFixPrompt && options.ai) {
         const promptResult = await generateFixPrompt({
           report: result.report,
           fileContent: result.context.raw,
@@ -97,12 +115,12 @@ program
 
         if (promptResult.error) {
           console.error(chalk.dim(`Fix prompt generation skipped: ${promptResult.error}`));
-        } else if (promptResult.short || promptResult.full) {
-          console.log();
-          console.log(chalk.bold("Proposed fix:"));
-          if (options.fixPrompt === "short" || options.fixPrompt === "full") {
-            const style = options.fixPrompt === "short" ? promptResult.short : promptResult.full;
-            if (style) console.log(style);
+        } else {
+          const style = options.fixPrompt === "short" ? promptResult.short : promptResult.full;
+          if (style) {
+            console.log();
+            console.log(chalk.bold("Proposed fix:"));
+            console.log(style);
           }
         }
       }

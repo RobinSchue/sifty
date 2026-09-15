@@ -8,6 +8,7 @@
  * src/index.ts.
  */
 import { spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -59,5 +60,64 @@ describe("CLI smoke test", () => {
 
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("File not found");
+  });
+
+  it("prints the package.json version, not a hardcoded one", () => {
+    const result = runCli(["--version"]);
+
+    const packageJson = JSON.parse(
+      readFileSync(resolve(process.cwd(), "package.json"), "utf8"),
+    ) as { version: string };
+
+    expect(result.stdout.trim()).toBe(packageJson.version);
+  });
+});
+
+/** Wave 1 — invalid input fails loudly instead of silently falling back. */
+describe("CLI smoke test — boundary invariants", () => {
+  it("rejects an unknown preset with a non-zero exit and a helpful message", () => {
+    const result = runCli([
+      "check",
+      resolve(GOLDEN_DIR, "good.instructions.md"),
+      "--tool",
+      "copilot",
+      "--no-ai",
+      "--preset",
+      "bogus",
+    ]);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('Unknown preset "bogus"');
+    expect(result.stderr).toContain("balanced");
+  });
+
+  it("rejects an unknown --fix-prompt style via commander's own choice validation", () => {
+    const result = runCli([
+      "check",
+      resolve(GOLDEN_DIR, "good.instructions.md"),
+      "--tool",
+      "copilot",
+      "--no-ai",
+      "--fix-prompt",
+      "bogus",
+    ]);
+
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("Allowed choices are short, full");
+  });
+
+  it("suppresses --generate-fix-prompt entirely when --no-ai is set", () => {
+    const result = runCli([
+      "check",
+      resolve(GOLDEN_DIR, "good.instructions.md"),
+      "--tool",
+      "copilot",
+      "--no-ai",
+      "--generate-fix-prompt",
+    ]);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).not.toContain("Proposed fix:");
+    expect(result.stderr).not.toContain("Fix prompt generation skipped");
   });
 });
