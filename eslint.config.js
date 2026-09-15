@@ -3,7 +3,8 @@ import prettier from "eslint-config-prettier";
 import tseslint from "typescript-eslint";
 
 /**
- * Dependency-direction rules (Wave 3 of docs/architecture/reviews/…-baseline.md).
+ * Dependency-direction rules (Waves 2-3 of docs/architecture/reviews/…-baseline.md;
+ * see docs/architecture/dependency-rules.md for the human-readable version).
  *
  * ESLint flat config resolves a rule per matched file from the LAST config
  * block that sets it — blocks do NOT merge their options. So every block

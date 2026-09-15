@@ -176,7 +176,8 @@ src/
   cli.ts                  composition root: flags, env, file I/O, printing
   report.types.ts         schema of a result
   criteria/types.ts       schema of a criteria config
-  criteria/load.ts        loading, validation, file-kind detection
+  criteria/schema.ts      Zod validation for that schema (structural + cross-field)
+  criteria/load.ts        loading, file-kind detection; runs the schema above
   engine/text.ts          parses the file once for all measures
   engine/measures.ts      the mechanical measurements
   engine/runner.ts        analyze(): pure, config + content in, report out
@@ -203,8 +204,12 @@ npm run test
 npm run build
 ```
 
+Working in this repo — including with an AI agent — see `AGENTS.md` (language,
+commits, the golden safety net) and `docs/architecture/` (glossary, context map,
+dependency rules, and the ADRs in `docs/adr/` for why past decisions were made).
+
 Adding a check usually means editing `config/copilot.json` only. A new _kind_ of
-measurement means adding the type to `Measure` in `criteria.types.ts` — TypeScript
+measurement means adding the type to `Measure` in `criteria/types.ts` — TypeScript
 then refuses to compile until the implementation exists in `measures.ts`.
 
 ## Roadmap
@@ -226,4 +231,4 @@ TypeScript while another says just use `any`. No single-file linter can see that
 
 ## License
 
-Not decided yet.
+ISC (see `package.json`).
