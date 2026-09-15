@@ -157,7 +157,7 @@ program
           report: result.report,
           fileContent: content,
           fileKind: result.report.fileKind,
-          tool: options.tool,
+          tool: result.report.tool,
           ...(fixPromptProvider ? { provider: fixPromptProvider } : {}),
         });
         fixPromptUsage = promptResult.usage;
