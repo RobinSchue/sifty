@@ -64,7 +64,7 @@ export default tseslint.config(
             NODE_IO_BAN,
             CLI_ONLY_BAN,
             {
-              group: ["../providers/*"],
+              group: ["**/providers/*"],
               message:
                 "src/engine/** must depend on the AiProvider port (ai-provider.ts), not a concrete provider module.",
             },
@@ -106,7 +106,7 @@ export default tseslint.config(
             SDK_BAN,
             CLI_ONLY_BAN,
             {
-              group: ["../engine/*", "../providers/*", "../reporting/*", "../fixprompt/*"],
+              group: ["**/engine/*", "**/providers/*", "**/reporting/*", "**/fixprompt/*"],
               message:
                 "src/criteria/** must not depend on the engine, providers, reporting or fixprompt.",
             },
@@ -131,7 +131,7 @@ export default tseslint.config(
             NODE_IO_BAN,
             { group: ["commander", "dotenv"], message: CLI_ONLY_BAN.message },
             {
-              group: ["../criteria/*", "../providers/*"],
+              group: ["**/criteria/*", "**/providers/*"],
               message:
                 "src/reporting/** formats a Report — it has no reason to load criteria or reach a provider.",
             },
@@ -143,7 +143,7 @@ export default tseslint.config(
         {
           patterns: [
             {
-              group: ["../engine/*"],
+              group: ["**/engine/*"],
               allowTypeImports: true,
               message:
                 "src/reporting/** may import engine TYPES only (`import type { Report }`) — never engine code.",
