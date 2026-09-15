@@ -332,6 +332,21 @@ describe("criteriaConfigSchema — check.overrides", () => {
     expect(firstIssuePath(result)).toBe("checks.0.overrides.repo-wide.requires.0");
   });
 
+  it("rejects an override whose appliesTo names an unknown file kind", () => {
+    const config = makeConfig({
+      checks: [
+        makeCheck({
+          id: "cost.x",
+          measure: { type: "tokenCount" },
+          overrides: { "repo-wide": { appliesTo: ["no-such-kind"] } },
+        }),
+      ],
+    });
+    const result = criteriaConfigSchema.safeParse(config);
+    expect(result.success).toBe(false);
+    expect(firstIssuePath(result)).toBe("checks.0.overrides.repo-wide.appliesTo.0");
+  });
+
   it("rejects an override whose measure references an unknown word set", () => {
     const config = makeConfig({
       words: { vague: ["maybe"] },

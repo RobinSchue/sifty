@@ -231,15 +231,7 @@ function validateCrossReferences(config: CriteriaConfig, ctx: z.RefinementCtx): 
       });
     }
 
-    check.appliesTo.forEach((kind, kindIndex) => {
-      if (!fileKindIds.has(kind)) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["checks", index, "appliesTo", kindIndex],
-          message: `check "${check.id}" applies to unknown file kind "${kind}"`,
-        });
-      }
-    });
+    validateAppliesTo(check.appliesTo, check.id, fileKindIds, basePath, ctx);
 
     if (check.mode === "mechanical" && !check.measure) {
       ctx.addIssue({
@@ -365,6 +357,24 @@ function validateBandOrder(
   });
 }
 
+function validateAppliesTo(
+  appliesTo: string[],
+  checkId: string,
+  fileKindIds: Set<string>,
+  basePath: (string | number)[],
+  ctx: z.RefinementCtx,
+): void {
+  appliesTo.forEach((kind, kindIndex) => {
+    if (!fileKindIds.has(kind)) {
+      ctx.addIssue({
+        code: "custom",
+        path: [...basePath, "appliesTo", kindIndex],
+        message: `check "${checkId}" applies to unknown file kind "${kind}"`,
+      });
+    }
+  });
+}
+
 function validateRequires(
   requires: string[] | undefined,
   checkId: string,
@@ -471,6 +481,9 @@ function validateOverrides(
     }
     if (override.requires) {
       validateRequires(override.requires, label, checkIds, basePath, ctx);
+    }
+    if (override.appliesTo) {
+      validateAppliesTo(override.appliesTo, label, fileKindIds, basePath, ctx);
     }
   }
 }
