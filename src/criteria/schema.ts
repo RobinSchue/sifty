@@ -182,6 +182,8 @@ function validateCrossReferences(config: CriteriaConfig, ctx: z.RefinementCtx): 
     });
   }
 
+  validatePatternSets(config, ctx);
+
   // A weight per axis for every preset is already enforced structurally —
   // presetSchema.weights is z.record(axisIdSchema, z.number()), so a missing
   // key fails to parse before this refinement ever runs. No extra check here.
@@ -258,6 +260,28 @@ function validateCrossReferences(config: CriteriaConfig, ctx: z.RefinementCtx): 
         message: `security.redactWith references unknown pattern set "${setId}"`,
       });
     }
+  });
+}
+
+/**
+ * `pattern.re`/`pattern.flags` are compiled into a real `RegExp` on every
+ * file analyzed (measures.ts, text.ts) — an invalid expression should fail
+ * loudly here, once, rather than degrading every check that uses it to a
+ * silent per-file failure.
+ */
+function validatePatternSets(config: CriteriaConfig, ctx: z.RefinementCtx): void {
+  Object.entries(config.sets.patterns).forEach(([setId, patterns]) => {
+    patterns.forEach((pattern, patternIndex) => {
+      try {
+        new RegExp(pattern.re, pattern.flags);
+      } catch (error) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["sets", "patterns", setId, patternIndex, "re"],
+          message: `pattern "${pattern.id}" in set "${setId}" is not a valid regular expression: ${error instanceof Error ? error.message : String(error)}`,
+        });
+      }
+    });
   });
 }
 
