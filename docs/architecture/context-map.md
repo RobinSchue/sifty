@@ -8,8 +8,7 @@ graph LR
   CLI --> REP["Reporting<br/>src/reporting/"]
   CLI --> FIX["Fix Prompt<br/>src/fixprompt/"]
   ENG -->|"types only"| CRIT
-  ENG -->|"port: AiProvider"| PROV
-  FIX -->|"port: AiProvider"| PROV
+  PROV -->|"implements port: AiProvider"| ENG
   REP -->|"types only"| ENG
   FIX -->|"types only"| ENG
   COMP["Composite Review (planned)<br/>src/composite/"] -.-> ENG
