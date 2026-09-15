@@ -148,6 +148,22 @@ describe("validateCriteria", () => {
     );
   });
 
+  it("rejects an override whose measure type is unimplemented", () => {
+    const config = makeConfig({
+      checks: [
+        makeCheck({
+          id: "clarity.example",
+          measure: { type: "frontmatterValid" },
+          // @ts-expect-error deliberately invalid for the test
+          overrides: { "repo-wide": { measure: { type: "notARealMeasure" } } },
+        }),
+      ],
+    });
+    expect(() => validateCriteria(config, "test", VALIDATE_OPTIONS)).toThrow(
+      /override for "repo-wide".*unimplemented measure "notARealMeasure"/,
+    );
+  });
+
   it("rejects an ai check with no question", () => {
     const config = makeConfig({
       checks: [

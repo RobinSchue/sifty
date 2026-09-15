@@ -270,6 +270,85 @@ describe("criteriaConfigSchema — check.overrides", () => {
     });
     expect(criteriaConfigSchema.safeParse(config).success).toBe(true);
   });
+
+  // resolveCheck() spreads an override onto the base check at runtime, so an
+  // override's own scoring/measure/requires get the same semantic rules.
+  it("rejects an override whose bands are not ascending", () => {
+    const config = makeConfig({
+      checks: [
+        makeCheck({
+          id: "cost.x",
+          measure: { type: "tokenCount" },
+          overrides: {
+            "repo-wide": {
+              scoring: {
+                type: "bands",
+                bands: [
+                  { upTo: 500, score: 100 },
+                  { upTo: 200, score: 50 },
+                  { upTo: null, score: 0 },
+                ],
+              },
+            },
+          },
+        }),
+      ],
+    });
+    const result = criteriaConfigSchema.safeParse(config);
+    expect(result.success).toBe(false);
+    expect(firstIssuePath(result)).toBe("checks.0.overrides.repo-wide.scoring.bands.1.upTo");
+    if (!result.success) {
+      expect(result.error.issues[0]?.message).toMatch(/override for "repo-wide".*ascending/);
+    }
+  });
+
+  it("rejects an override whose scoring type contradicts the base check's mode", () => {
+    const config = makeConfig({
+      checks: [
+        makeCheck({
+          id: "cost.x",
+          measure: { type: "tokenCount" },
+          overrides: { "repo-wide": { scoring: { type: "ai" } } },
+        }),
+      ],
+    });
+    const result = criteriaConfigSchema.safeParse(config);
+    expect(result.success).toBe(false);
+    expect(firstIssuePath(result)).toBe("checks.0.overrides.repo-wide.scoring.type");
+  });
+
+  it("rejects an override that requires an unknown check", () => {
+    const config = makeConfig({
+      checks: [
+        makeCheck({
+          id: "cost.x",
+          measure: { type: "tokenCount" },
+          overrides: { "repo-wide": { requires: ["ghost.check"] } },
+        }),
+      ],
+    });
+    const result = criteriaConfigSchema.safeParse(config);
+    expect(result.success).toBe(false);
+    expect(firstIssuePath(result)).toBe("checks.0.overrides.repo-wide.requires.0");
+  });
+
+  it("rejects an override whose measure references an unknown word set", () => {
+    const config = makeConfig({
+      words: { vague: ["maybe"] },
+      checks: [
+        makeCheck({
+          id: "clarity.x",
+          measure: { type: "wordDensity", params: { wordSet: "vague" } },
+          overrides: {
+            "repo-wide": { measure: { type: "wordDensity", params: { wordSet: "no-such-set" } } },
+          },
+        }),
+      ],
+    });
+    const result = criteriaConfigSchema.safeParse(config);
+    expect(result.success).toBe(false);
+    expect(firstIssuePath(result)).toBe("checks.0.overrides.repo-wide.measure.params.wordSet");
+  });
 });
 
 describe("criteriaConfigSchema — mode/scoring compatibility", () => {

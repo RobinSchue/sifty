@@ -91,12 +91,20 @@ export function validateCriteria(
 
   if (result.success) {
     for (const check of result.data.checks) {
-      if (
-        check.mode === "mechanical" &&
-        check.measure &&
-        !options.measureTypes.includes(check.measure.type)
-      ) {
-        problems.push(`check "${check.id}" uses unimplemented measure "${check.measure.type}"`);
+      if (check.mode !== "mechanical") continue;
+      // An override's measure replaces the base one at runtime (resolveCheck), so it
+      // has to be implemented too.
+      const candidates = [
+        { measure: check.measure, where: "" },
+        ...Object.entries(check.overrides ?? {}).map(([kind, override]) => ({
+          measure: override.measure,
+          where: ` (override for "${kind}")`,
+        })),
+      ];
+      for (const { measure, where } of candidates) {
+        if (measure && !options.measureTypes.includes(measure.type)) {
+          problems.push(`check "${check.id}"${where} uses unimplemented measure "${measure.type}"`);
+        }
       }
     }
   }

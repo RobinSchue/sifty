@@ -208,16 +208,20 @@ function validateCrossReferences(config: CriteriaConfig, ctx: z.RefinementCtx): 
   // presetSchema.weights is z.record(axisIdSchema, z.number()), so a missing
   // key fails to parse before this refinement ever runs. No extra check here.
 
-  const checkIds = new Set<string>();
+  // All ids up front so `requires` can point forward; a second set catches duplicates.
+  const checkIds = new Set(config.checks.map((check) => check.id));
+  const seenIds = new Set<string>();
   config.checks.forEach((check, index) => {
-    if (checkIds.has(check.id)) {
+    const basePath = ["checks", index];
+
+    if (seenIds.has(check.id)) {
       ctx.addIssue({
         code: "custom",
         path: ["checks", index, "id"],
         message: `duplicate check id "${check.id}"`,
       });
     }
-    checkIds.add(check.id);
+    seenIds.add(check.id);
 
     if (!axisIds.has(check.axis)) {
       ctx.addIssue({
@@ -252,25 +256,13 @@ function validateCrossReferences(config: CriteriaConfig, ctx: z.RefinementCtx): 
       });
     }
 
-    validateModeScoring(check.mode, check.scoring, check.id, ["checks", index], ctx);
+    validateModeScoring(check.mode, check.scoring, check.id, basePath, ctx);
     if (check.scoring.type === "bands") {
-      validateBandOrder(check.scoring.bands, check.id, index, ctx);
+      validateBandOrder(check.scoring.bands, check.id, basePath, ctx);
     }
-
-    validateSetReferences(config, check, index, ctx);
-    validateOverrides(check, index, fileKindIds, ctx);
-  });
-
-  config.checks.forEach((check, index) => {
-    (check.requires ?? []).forEach((required, requiredIndex) => {
-      if (!checkIds.has(required)) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["checks", index, "requires", requiredIndex],
-          message: `check "${check.id}" requires unknown check "${required}"`,
-        });
-      }
-    });
+    validateSetReferences(config, check.measure, check.id, basePath, ctx);
+    validateRequires(check.requires, check.id, checkIds, basePath, ctx);
+    validateOverrides(config, check, index, fileKindIds, checkIds, ctx);
   });
 
   (config.security.redactWith ?? []).forEach((setId, setIndex) => {
@@ -339,14 +331,14 @@ function validateModeScoring(
 function validateBandOrder(
   bands: Band[],
   checkId: string,
-  checkIndex: number,
+  basePath: (string | number)[],
   ctx: z.RefinementCtx,
 ): void {
   const last = bands.at(-1);
   if (!last || last.upTo !== null) {
     ctx.addIssue({
       code: "custom",
-      path: ["checks", checkIndex, "scoring", "bands"],
+      path: [...basePath, "scoring", "bands"],
       message: `check "${checkId}": last band must be open ended (upTo: null)`,
     });
   }
@@ -357,7 +349,7 @@ function validateBandOrder(
     if (band.upTo === null) {
       ctx.addIssue({
         code: "custom",
-        path: ["checks", checkIndex, "scoring", "bands", bandIndex, "upTo"],
+        path: [...basePath, "scoring", "bands", bandIndex, "upTo"],
         message: `check "${checkId}": only the last band may have upTo: null`,
       });
       return;
@@ -365,7 +357,7 @@ function validateBandOrder(
     if (previousUpTo !== null && band.upTo <= previousUpTo) {
       ctx.addIssue({
         code: "custom",
-        path: ["checks", checkIndex, "scoring", "bands", bandIndex, "upTo"],
+        path: [...basePath, "scoring", "bands", bandIndex, "upTo"],
         message: `check "${checkId}": band upTo values must be strictly ascending`,
       });
     }
@@ -373,21 +365,40 @@ function validateBandOrder(
   });
 }
 
-function validateSetReferences(
-  config: CriteriaConfig,
-  check: Check,
-  checkIndex: number,
+function validateRequires(
+  requires: string[] | undefined,
+  checkId: string,
+  checkIds: Set<string>,
+  basePath: (string | number)[],
   ctx: z.RefinementCtx,
 ): void {
-  const params = check.measure?.params;
+  (requires ?? []).forEach((required, requiredIndex) => {
+    if (!checkIds.has(required)) {
+      ctx.addIssue({
+        code: "custom",
+        path: [...basePath, "requires", requiredIndex],
+        message: `check "${checkId}" requires unknown check "${required}"`,
+      });
+    }
+  });
+}
+
+function validateSetReferences(
+  config: CriteriaConfig,
+  measure: Measure | undefined,
+  checkId: string,
+  basePath: (string | number)[],
+  ctx: z.RefinementCtx,
+): void {
+  const params = measure?.params;
   if (!params) return;
 
   const wordSetId = params["wordSet"];
   if (typeof wordSetId === "string" && !config.sets.words[wordSetId]) {
     ctx.addIssue({
       code: "custom",
-      path: ["checks", checkIndex, "measure", "params", "wordSet"],
-      message: `check "${check.id}" references unknown word set "${wordSetId}"`,
+      path: [...basePath, "measure", "params", "wordSet"],
+      message: `check "${checkId}" references unknown word set "${wordSetId}"`,
     });
   }
 
@@ -395,8 +406,8 @@ function validateSetReferences(
   if (typeof patternSetId === "string" && !config.sets.patterns[patternSetId]) {
     ctx.addIssue({
       code: "custom",
-      path: ["checks", checkIndex, "measure", "params", "patternSet"],
-      message: `check "${check.id}" references unknown pattern set "${patternSetId}"`,
+      path: [...basePath, "measure", "params", "patternSet"],
+      message: `check "${checkId}" references unknown pattern set "${patternSetId}"`,
     });
   }
 
@@ -406,8 +417,8 @@ function validateSetReferences(
       if (typeof setId === "string" && !config.sets.words[setId]) {
         ctx.addIssue({
           code: "custom",
-          path: ["checks", checkIndex, "measure", "params", "stopwordSets", language],
-          message: `check "${check.id}" references unknown word set "${setId}"`,
+          path: [...basePath, "measure", "params", "stopwordSets", language],
+          message: `check "${checkId}" references unknown word set "${setId}"`,
         });
       }
     }
@@ -417,16 +428,21 @@ function validateSetReferences(
 const FORBIDDEN_OVERRIDE_KEYS = ["id", "mode", "axis"] as const;
 
 function validateOverrides(
+  config: CriteriaConfig,
   check: Check,
   checkIndex: number,
   fileKindIds: Set<string>,
+  checkIds: Set<string>,
   ctx: z.RefinementCtx,
 ): void {
   for (const [fileKindId, override] of Object.entries(check.overrides ?? {})) {
+    const basePath = ["checks", checkIndex, "overrides", fileKindId];
+    const label = `${check.id} (override for "${fileKindId}")`;
+
     if (!fileKindIds.has(fileKindId)) {
       ctx.addIssue({
         code: "custom",
-        path: ["checks", checkIndex, "overrides", fileKindId],
+        path: basePath,
         message: `check "${check.id}" overrides unknown file kind "${fileKindId}"`,
       });
     }
@@ -434,10 +450,27 @@ function validateOverrides(
       if (override && typeof override === "object" && forbidden in override) {
         ctx.addIssue({
           code: "custom",
-          path: ["checks", checkIndex, "overrides", fileKindId, forbidden],
+          path: [...basePath, forbidden],
           message: `check "${check.id}": an override for "${fileKindId}" must not set "${forbidden}"`,
         });
       }
+    }
+
+    // resolveCheck() spreads these straight onto the base check at runtime, so
+    // whatever the override sets gets the same semantic rules as the base —
+    // only the fields it actually sets, so a base-check problem isn't reported
+    // a second time under a misleading override path.
+    if (override.scoring) {
+      validateModeScoring(check.mode, override.scoring, label, basePath, ctx);
+      if (override.scoring.type === "bands") {
+        validateBandOrder(override.scoring.bands, label, basePath, ctx);
+      }
+    }
+    if (override.measure) {
+      validateSetReferences(config, override.measure, label, basePath, ctx);
+    }
+    if (override.requires) {
+      validateRequires(override.requires, label, checkIds, basePath, ctx);
     }
   }
 }
