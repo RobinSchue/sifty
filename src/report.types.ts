@@ -59,6 +59,8 @@ export interface AxisScore {
   checkCount: number;
   /** Checks assigned to this axis for this file, whether or not they contributed. */
   totalChecks: number;
+  /** From the SAME grade bands as the overall grade (config.grades) — not a hardcoded threshold. */
+  color: "green" | "amber" | "red";
 }
 
 /** A blocker-severity check that did not fully pass — caps the overall score. */

@@ -74,6 +74,7 @@ async function main() {
             score: a.score,
             checkCount: a.checkCount,
             totalChecks: a.totalChecks,
+            color: a.color,
           })),
           blockers: report.blockers.map((b) => b.checkId),
           fixes: report.fixes.map((f) => f.checkId),

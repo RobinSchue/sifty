@@ -47,7 +47,13 @@ interface ExpectedEntry {
   overallScore: number;
   cappedFrom?: number;
   grade: { label: string; color: string };
-  axisScores: { axis: string; score: number; checkCount: number; totalChecks: number }[];
+  axisScores: {
+    axis: string;
+    score: number;
+    checkCount: number;
+    totalChecks: number;
+    color: string;
+  }[];
   blockers: string[];
   fixes: string[];
   fileKind: string;
@@ -94,6 +100,7 @@ function pinned(report: Report) {
       score: a.score,
       checkCount: a.checkCount,
       totalChecks: a.totalChecks,
+      color: a.color,
     })),
     blockers: report.blockers.map((b) => b.checkId),
     fixes: report.fixes.map((f) => f.checkId),

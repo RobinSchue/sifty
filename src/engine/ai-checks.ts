@@ -237,9 +237,13 @@ function selectRequestedFindings(
 }
 
 function normalizeFinding(finding: z.infer<typeof aiFindingSchema>): AiFinding {
+  // No clamp here: aiFindingSchema already validates score with .min(0).max(100) —
+  // clamping an already-validated value would only hide a schema bug. scoring.ts
+  // keeps the one real clampScore(), for AiFinding values supplied directly via
+  // AnalyzeDeps.aiFindings, which bypass this schema entirely.
   return {
     checkId: finding.checkId,
-    score: clampScore(finding.score),
+    score: finding.score,
     rationale: finding.rationale,
     evidence: normalizeEvidence(finding.evidence),
   };
@@ -254,10 +258,6 @@ function normalizeEvidence(
     excerpt: entry.excerpt,
     hint: entry.hint,
   }));
-}
-
-function clampScore(score: number): number {
-  return Math.min(100, Math.max(0, score));
 }
 
 function oneLine(value: string): string {

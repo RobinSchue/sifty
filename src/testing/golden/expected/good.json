@@ -12,31 +12,36 @@
         "axis": "clarity",
         "score": 100,
         "checkCount": 3,
-        "totalChecks": 5
+        "totalChecks": 5,
+        "color": "green"
       },
       {
         "axis": "structure",
         "score": 100,
         "checkCount": 6,
-        "totalChecks": 6
+        "totalChecks": 6,
+        "color": "green"
       },
       {
         "axis": "completeness",
         "score": 16,
         "checkCount": 2,
-        "totalChecks": 5
+        "totalChecks": 5,
+        "color": "red"
       },
       {
         "axis": "cost",
         "score": 70,
         "checkCount": 4,
-        "totalChecks": 4
+        "totalChecks": 4,
+        "color": "green"
       },
       {
         "axis": "security",
         "score": 100,
         "checkCount": 4,
-        "totalChecks": 4
+        "totalChecks": 4,
+        "color": "green"
       }
     ],
     "blockers": [],
@@ -56,31 +61,36 @@
         "axis": "clarity",
         "score": 90,
         "checkCount": 5,
-        "totalChecks": 5
+        "totalChecks": 5,
+        "color": "green"
       },
       {
         "axis": "structure",
         "score": 100,
         "checkCount": 6,
-        "totalChecks": 6
+        "totalChecks": 6,
+        "color": "green"
       },
       {
         "axis": "completeness",
         "score": 42,
         "checkCount": 4,
-        "totalChecks": 5
+        "totalChecks": 5,
+        "color": "red"
       },
       {
         "axis": "cost",
         "score": 70,
         "checkCount": 4,
-        "totalChecks": 4
+        "totalChecks": 4,
+        "color": "green"
       },
       {
         "axis": "security",
         "score": 100,
         "checkCount": 4,
-        "totalChecks": 4
+        "totalChecks": 4,
+        "color": "green"
       }
     ],
     "blockers": [],
@@ -108,31 +118,36 @@
         "axis": "clarity",
         "score": 100,
         "checkCount": 3,
-        "totalChecks": 5
+        "totalChecks": 5,
+        "color": "green"
       },
       {
         "axis": "structure",
         "score": 100,
         "checkCount": 6,
-        "totalChecks": 6
+        "totalChecks": 6,
+        "color": "green"
       },
       {
         "axis": "completeness",
         "score": 16,
         "checkCount": 2,
-        "totalChecks": 5
+        "totalChecks": 5,
+        "color": "red"
       },
       {
         "axis": "cost",
         "score": 70,
         "checkCount": 4,
-        "totalChecks": 4
+        "totalChecks": 4,
+        "color": "green"
       },
       {
         "axis": "security",
         "score": 100,
         "checkCount": 4,
-        "totalChecks": 4
+        "totalChecks": 4,
+        "color": "green"
       }
     ],
     "blockers": [],
@@ -152,31 +167,36 @@
         "axis": "clarity",
         "score": 90,
         "checkCount": 5,
-        "totalChecks": 5
+        "totalChecks": 5,
+        "color": "green"
       },
       {
         "axis": "structure",
         "score": 100,
         "checkCount": 6,
-        "totalChecks": 6
+        "totalChecks": 6,
+        "color": "green"
       },
       {
         "axis": "completeness",
         "score": 42,
         "checkCount": 4,
-        "totalChecks": 5
+        "totalChecks": 5,
+        "color": "red"
       },
       {
         "axis": "cost",
         "score": 70,
         "checkCount": 4,
-        "totalChecks": 4
+        "totalChecks": 4,
+        "color": "green"
       },
       {
         "axis": "security",
         "score": 100,
         "checkCount": 4,
-        "totalChecks": 4
+        "totalChecks": 4,
+        "color": "green"
       }
     ],
     "blockers": [],
@@ -204,31 +224,36 @@
         "axis": "clarity",
         "score": 100,
         "checkCount": 3,
-        "totalChecks": 5
+        "totalChecks": 5,
+        "color": "green"
       },
       {
         "axis": "structure",
         "score": 100,
         "checkCount": 6,
-        "totalChecks": 6
+        "totalChecks": 6,
+        "color": "green"
       },
       {
         "axis": "completeness",
         "score": 16,
         "checkCount": 2,
-        "totalChecks": 5
+        "totalChecks": 5,
+        "color": "red"
       },
       {
         "axis": "cost",
         "score": 70,
         "checkCount": 4,
-        "totalChecks": 4
+        "totalChecks": 4,
+        "color": "green"
       },
       {
         "axis": "security",
         "score": 100,
         "checkCount": 4,
-        "totalChecks": 4
+        "totalChecks": 4,
+        "color": "green"
       }
     ],
     "blockers": [],
@@ -248,31 +273,36 @@
         "axis": "clarity",
         "score": 90,
         "checkCount": 5,
-        "totalChecks": 5
+        "totalChecks": 5,
+        "color": "green"
       },
       {
         "axis": "structure",
         "score": 100,
         "checkCount": 6,
-        "totalChecks": 6
+        "totalChecks": 6,
+        "color": "green"
       },
       {
         "axis": "completeness",
         "score": 42,
         "checkCount": 4,
-        "totalChecks": 5
+        "totalChecks": 5,
+        "color": "red"
       },
       {
         "axis": "cost",
         "score": 70,
         "checkCount": 4,
-        "totalChecks": 4
+        "totalChecks": 4,
+        "color": "green"
       },
       {
         "axis": "security",
         "score": 100,
         "checkCount": 4,
-        "totalChecks": 4
+        "totalChecks": 4,
+        "color": "green"
       }
     ],
     "blockers": [],

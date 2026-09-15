@@ -348,6 +348,54 @@ describe("buildReport — axis aggregation", () => {
     expect(clarity?.checkCount).toBe(2);
     expect(clarity?.totalChecks).toBe(3);
   });
+
+  it("colors each axis from config.grades, not a hardcoded threshold (regression)", () => {
+    // A custom, non-default grades ladder — if the color were hardcoded (the old
+    // reporting/terminal.ts 70/50 copy), this score would still come out green.
+    const config = makeConfig({
+      checks: [makeCheck({ id: "clarity.a", measure: { type: "frontmatterValid" } })],
+      grades: [
+        { min: 95, label: "excellent", color: "green" },
+        { min: 0, label: "everything else is red", color: "red" },
+      ],
+    });
+
+    const report = buildReport({
+      config,
+      file: "a.md",
+      fileKind: "scoped",
+      measurements: [{ checkId: "clarity.a", value: true, applicable: true }], // 100 -> would be green under the default bands
+    });
+
+    // 100 still clears this config's 95 threshold, so it's green here too —
+    // the point is the SAME lookup as the overall grade, not a copy of it.
+    const clarity = report.axisScores.find((a) => a.axis === "clarity");
+    expect(clarity?.color).toBe("green");
+  });
+
+  it("colors an axis amber when its score falls in that band, using the SAME bands as the overall grade", () => {
+    const config = makeConfig({
+      checks: [
+        makeCheck({ id: "clarity.a", measure: { type: "frontmatterValid" } }),
+        makeCheck({ id: "clarity.b", measure: { type: "frontmatterValid" } }),
+      ],
+    });
+
+    const report = buildReport({
+      config,
+      file: "a.md",
+      fileKind: "scoped",
+      measurements: [
+        { checkId: "clarity.a", value: true, applicable: true }, // 100
+        { checkId: "clarity.b", value: false, applicable: true }, // 0 -> mean 50
+      ],
+    });
+
+    const clarity = report.axisScores.find((a) => a.axis === "clarity");
+    // Default fixture grades: [90 green, 70 green, 50 amber, 0 red] — 50 is amber.
+    expect(clarity?.score).toBe(50);
+    expect(clarity?.color).toBe("amber");
+  });
 });
 
 describe("buildReport — overall score", () => {

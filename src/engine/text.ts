@@ -35,11 +35,10 @@ export interface FileContext {
   /** Body without code fences, inline code and URLs — this is what humans read. */
   prose: string;
   proseWords: string[];
-  tokenEstimate: number;
   hasCodeFence: boolean;
 }
 
-export function prepareFile(path: string, raw: string, charsPerToken = 4): FileContext {
+export function prepareFile(path: string, raw: string): FileContext {
   let frontmatterValid = true;
   let frontmatterError: string | undefined;
   let data: Record<string, unknown> = {};
@@ -77,7 +76,6 @@ export function prepareFile(path: string, raw: string, charsPerToken = 4): FileC
     bodyOffset,
     prose,
     proseWords: words(prose),
-    tokenEstimate: Math.ceil(raw.length / charsPerToken),
     hasCodeFence: /^\s*```/m.test(body),
   };
 }

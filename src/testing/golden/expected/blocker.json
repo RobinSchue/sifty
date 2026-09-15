@@ -13,31 +13,36 @@
         "axis": "clarity",
         "score": 100,
         "checkCount": 3,
-        "totalChecks": 5
+        "totalChecks": 5,
+        "color": "green"
       },
       {
         "axis": "structure",
         "score": 100,
         "checkCount": 6,
-        "totalChecks": 6
+        "totalChecks": 6,
+        "color": "green"
       },
       {
         "axis": "completeness",
         "score": 100,
         "checkCount": 2,
-        "totalChecks": 5
+        "totalChecks": 5,
+        "color": "green"
       },
       {
         "axis": "cost",
         "score": 98,
         "checkCount": 4,
-        "totalChecks": 4
+        "totalChecks": 4,
+        "color": "green"
       },
       {
         "axis": "security",
         "score": 50,
         "checkCount": 4,
-        "totalChecks": 4
+        "totalChecks": 4,
+        "color": "amber"
       }
     ],
     "blockers": ["security.secrets", "security.internal-hosts"],
@@ -58,31 +63,36 @@
         "axis": "clarity",
         "score": 90,
         "checkCount": 5,
-        "totalChecks": 5
+        "totalChecks": 5,
+        "color": "green"
       },
       {
         "axis": "structure",
         "score": 100,
         "checkCount": 6,
-        "totalChecks": 6
+        "totalChecks": 6,
+        "color": "green"
       },
       {
         "axis": "completeness",
         "score": 83,
         "checkCount": 5,
-        "totalChecks": 5
+        "totalChecks": 5,
+        "color": "green"
       },
       {
         "axis": "cost",
         "score": 98,
         "checkCount": 4,
-        "totalChecks": 4
+        "totalChecks": 4,
+        "color": "green"
       },
       {
         "axis": "security",
         "score": 50,
         "checkCount": 4,
-        "totalChecks": 4
+        "totalChecks": 4,
+        "color": "amber"
       }
     ],
     "blockers": ["security.secrets", "security.internal-hosts"],
@@ -112,31 +122,36 @@
         "axis": "clarity",
         "score": 100,
         "checkCount": 3,
-        "totalChecks": 5
+        "totalChecks": 5,
+        "color": "green"
       },
       {
         "axis": "structure",
         "score": 100,
         "checkCount": 6,
-        "totalChecks": 6
+        "totalChecks": 6,
+        "color": "green"
       },
       {
         "axis": "completeness",
         "score": 100,
         "checkCount": 2,
-        "totalChecks": 5
+        "totalChecks": 5,
+        "color": "green"
       },
       {
         "axis": "cost",
         "score": 98,
         "checkCount": 4,
-        "totalChecks": 4
+        "totalChecks": 4,
+        "color": "green"
       },
       {
         "axis": "security",
         "score": 50,
         "checkCount": 4,
-        "totalChecks": 4
+        "totalChecks": 4,
+        "color": "amber"
       }
     ],
     "blockers": ["security.secrets", "security.internal-hosts"],
@@ -157,31 +172,36 @@
         "axis": "clarity",
         "score": 90,
         "checkCount": 5,
-        "totalChecks": 5
+        "totalChecks": 5,
+        "color": "green"
       },
       {
         "axis": "structure",
         "score": 100,
         "checkCount": 6,
-        "totalChecks": 6
+        "totalChecks": 6,
+        "color": "green"
       },
       {
         "axis": "completeness",
         "score": 83,
         "checkCount": 5,
-        "totalChecks": 5
+        "totalChecks": 5,
+        "color": "green"
       },
       {
         "axis": "cost",
         "score": 98,
         "checkCount": 4,
-        "totalChecks": 4
+        "totalChecks": 4,
+        "color": "green"
       },
       {
         "axis": "security",
         "score": 50,
         "checkCount": 4,
-        "totalChecks": 4
+        "totalChecks": 4,
+        "color": "amber"
       }
     ],
     "blockers": ["security.secrets", "security.internal-hosts"],
@@ -211,31 +231,36 @@
         "axis": "clarity",
         "score": 100,
         "checkCount": 3,
-        "totalChecks": 5
+        "totalChecks": 5,
+        "color": "green"
       },
       {
         "axis": "structure",
         "score": 100,
         "checkCount": 6,
-        "totalChecks": 6
+        "totalChecks": 6,
+        "color": "green"
       },
       {
         "axis": "completeness",
         "score": 100,
         "checkCount": 2,
-        "totalChecks": 5
+        "totalChecks": 5,
+        "color": "green"
       },
       {
         "axis": "cost",
         "score": 98,
         "checkCount": 4,
-        "totalChecks": 4
+        "totalChecks": 4,
+        "color": "green"
       },
       {
         "axis": "security",
         "score": 50,
         "checkCount": 4,
-        "totalChecks": 4
+        "totalChecks": 4,
+        "color": "amber"
       }
     ],
     "blockers": ["security.secrets", "security.internal-hosts"],
@@ -256,31 +281,36 @@
         "axis": "clarity",
         "score": 90,
         "checkCount": 5,
-        "totalChecks": 5
+        "totalChecks": 5,
+        "color": "green"
       },
       {
         "axis": "structure",
         "score": 100,
         "checkCount": 6,
-        "totalChecks": 6
+        "totalChecks": 6,
+        "color": "green"
       },
       {
         "axis": "completeness",
         "score": 83,
         "checkCount": 5,
-        "totalChecks": 5
+        "totalChecks": 5,
+        "color": "green"
       },
       {
         "axis": "cost",
         "score": 98,
         "checkCount": 4,
-        "totalChecks": 4
+        "totalChecks": 4,
+        "color": "green"
       },
       {
         "axis": "security",
         "score": 50,
         "checkCount": 4,
-        "totalChecks": 4
+        "totalChecks": 4,
+        "color": "amber"
       }
     ],
     "blockers": ["security.secrets", "security.internal-hosts"],

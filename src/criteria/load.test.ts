@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { detectFileKind, loadCriteria, validateCriteria } from "./load.js";
-import { ALL_MEASURE_TYPES, makeCheck, makeConfig } from "../testing/fixtures.js";
+import { ALL_MEASURE_TYPES, makeCheck, makeConfig, makePreset } from "../testing/fixtures.js";
 
 const VALIDATE_OPTIONS = { measureTypes: ALL_MEASURE_TYPES };
 
@@ -64,7 +64,7 @@ describe("validateCriteria", () => {
     expect(() => validateCriteria(config, "test", VALIDATE_OPTIONS)).toThrow(/schemaVersion/);
   });
 
-  it("rejects a check pointing at an unknown axis", () => {
+  it("rejects a check whose axis is not a known axis id at all", () => {
     const config = makeConfig({
       checks: [
         makeCheck({
@@ -75,7 +75,30 @@ describe("validateCriteria", () => {
         }),
       ],
     });
-    expect(() => validateCriteria(config, "test", VALIDATE_OPTIONS)).toThrow(/unknown axis/);
+    // Caught structurally by the axis enum, before the cross-reference check below runs.
+    expect(() => validateCriteria(config, "test", VALIDATE_OPTIONS)).toThrow(/checks\.0\.axis/);
+  });
+
+  it("rejects a check whose axis is valid but not defined in THIS config's axes (regression)", () => {
+    const config = makeConfig({
+      // Only two of the five known axis ids — a tool that deliberately
+      // doesn't use "security", say.
+      axes: [
+        { id: "clarity", label: "Clarity", description: "d" },
+        { id: "structure", label: "Structure", description: "d" },
+      ],
+      presets: { balanced: makePreset() },
+      checks: [
+        makeCheck({
+          id: "bad.axis",
+          measure: { type: "frontmatterValid" },
+          axis: "security", // a real AxisId, just not one this config declares
+        }),
+      ],
+    });
+    expect(() => validateCriteria(config, "test", VALIDATE_OPTIONS)).toThrow(
+      /unknown axis "security"/,
+    );
   });
 
   it("rejects a duplicate check id", () => {
@@ -93,7 +116,7 @@ describe("validateCriteria", () => {
       presets: { balanced: { label: "Balanced", weights: { clarity: 1 } as never } },
     });
     expect(() => validateCriteria(config, "test", VALIDATE_OPTIONS)).toThrow(
-      /has no weight for axis/,
+      /presets\.balanced\.weights\./,
     );
   });
 

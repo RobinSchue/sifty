@@ -15,7 +15,14 @@ function baseReport(overrides: Partial<Report> = {}): Report {
     aiFindings: [],
     checkScores: [],
     axisScores: [
-      { axis: "clarity", label: "Clarity & Precision", score: 90, checkCount: 3, totalChecks: 3 },
+      {
+        axis: "clarity",
+        label: "Clarity & Precision",
+        score: 90,
+        checkCount: 3,
+        totalChecks: 3,
+        color: "green",
+      },
     ],
     overallScore: 90,
     grade: { label: "strong", color: "green" },

@@ -12,7 +12,7 @@ import type {
   Check,
   CriteriaConfig,
   FileKind,
-  Grade,
+  GradeBand,
   Measure,
   PatternDef,
   Preset,
@@ -62,7 +62,7 @@ export function makeFileKinds(): FileKind[] {
   ];
 }
 
-export function makeGrades(): Grade[] {
+export function makeGrades(): GradeBand[] {
   return [
     { min: 90, label: "excellent", color: "green" },
     { min: 70, label: "good", color: "green" },
@@ -72,6 +72,7 @@ export function makeGrades(): Grade[] {
 }
 
 export interface MakeConfigOptions {
+  axes?: Axis[];
   checks?: Check[];
   words?: Record<string, string[]>;
   patterns?: Record<string, PatternDef[]>;
@@ -81,6 +82,7 @@ export interface MakeConfigOptions {
   defaultPreset?: string;
   blockerCapsOverallAt?: number;
   redactWith?: string[];
+  grades?: GradeBand[];
 }
 
 /** A complete, minimal, valid CriteriaConfig — override only what a test needs. */
@@ -90,7 +92,7 @@ export function makeConfig(options: MakeConfigOptions = {}): CriteriaConfig {
     tool: "test-tool",
     criteriaVersion: "0.0.0-test",
     updated: "2024-01-01",
-    axes: makeAxes(),
+    axes: options.axes ?? makeAxes(),
     presets: options.presets ?? { balanced: makePreset() },
     defaultPreset: options.defaultPreset ?? "balanced",
     fileKinds: options.fileKinds ?? makeFileKinds(),
@@ -100,7 +102,7 @@ export function makeConfig(options: MakeConfigOptions = {}): CriteriaConfig {
       patterns: options.patterns ?? {},
     },
     checks: options.checks ?? [],
-    grades: makeGrades(),
+    grades: options.grades ?? makeGrades(),
     security: {
       blockerCapsOverallAt: options.blockerCapsOverallAt ?? 40,
       reportBlockersSeparately: true,

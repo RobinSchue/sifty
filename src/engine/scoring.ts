@@ -244,13 +244,18 @@ function aggregateAxisScores(
       totalWeight > 0
         ? applicable.reduce((sum, o) => sum + o.check.weight * (o.score ?? 0), 0) / totalWeight
         : 0;
+    const rounded = Math.round(score);
 
     return {
       axis: axis.id,
       label: axis.label,
-      score: Math.round(score),
+      score: rounded,
       checkCount: applicable.length,
       totalChecks: onAxis.length,
+      // Same grade bands as the overall score (config.grades) — not a
+      // hardcoded threshold (see the terminal formatter, which used to have
+      // its own 70/50 copy of this).
+      color: resolveGrade(config, rounded).color,
     };
   });
 }
