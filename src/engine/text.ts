@@ -122,13 +122,29 @@ export function lineAt(text: string, index: number): number {
   return line;
 }
 
-/** Short context around a hit, whitespace collapsed. */
-export function excerptAt(text: string, index: number, length = 60): string {
+/**
+ * Short context around a hit, whitespace collapsed.
+ *
+ * When `matchLength` is given, the matched span is redacted in the raw slice
+ * first — before whitespace is collapsed and the excerpt is bounded — so a
+ * secret that contains a run of whitespace, or that runs past the excerpt
+ * window, never survives into the returned text in plaintext.
+ */
+export function excerptAt(text: string, index: number, length = 60, matchLength = 0): string {
   const start = Math.max(0, index - 10);
-  return text
-    .slice(start, start + length)
-    .replace(/\s+/g, " ")
-    .trim();
+  const end = start + length;
+  let window = text.slice(start, end);
+
+  if (matchLength > 0 && index < end) {
+    // `start` is always <= `index`, so the match's visible portion always
+    // begins at `index` — only the tail can fall outside the window.
+    const overlapLength = Math.min(matchLength, end - index);
+    const relIndex = index - start;
+    const redacted = redact(text.slice(index, index + overlapLength));
+    window = window.slice(0, relIndex) + redacted + window.slice(relIndex + overlapLength);
+  }
+
+  return window.replace(/\s+/g, " ").trim();
 }
 
 /**
