@@ -34,6 +34,8 @@ sifty check <file> --tool copilot
 sifty check <file> --tool copilot --preset cost
 sifty check <file> --tool copilot --config ./my-criteria.json
 sifty check <file> --tool copilot --no-ai
+sifty check <file> --tool copilot --generate-fix-prompt
+sifty check <file> --tool copilot --generate-fix-prompt --fix-prompt full
 ```
 
 The file kind is detected from the path:
@@ -67,6 +69,20 @@ naming the reason. None of these affect the exit code — only blockers do. Axes
 skipped checks show how many actually ran, e.g. `(3/5 checks)`.
 
 **Privacy:** when AI checks run, the full file content is sent to the Anthropic API.
+
+## Fix suggestions (AI-driven)
+
+After scoring, Sifty can generate ready-to-use prompts to help you fix the issues it found:
+
+```bash
+sifty check <file> --tool copilot --generate-fix-prompt
+```
+
+This generates two formats:
+- **`--fix-prompt short`**: Brief suggestion ("these issues found: [...]. Please fix.") — good for quick copy-paste
+- **`--fix-prompt full`** (default when both asked): Complete prompt with your file and detailed context, ready to paste into Claude/ChatGPT
+
+Uses `claude-sonnet-5` for better prompt quality (~$0.01–0.02 per file extra cost). If no key is set or the API fails, the fix prompt is skipped silently.
 
 ## What it rates
 
