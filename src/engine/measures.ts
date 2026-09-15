@@ -20,7 +20,6 @@ import {
   listItemBlocks,
   paragraphBlocks,
   phraseRegex,
-  redact,
   type Block,
   type FileContext,
 } from "./text.js";
@@ -191,9 +190,7 @@ const patternHits: MeasureFn = ({ ctx, params, config }) => {
     re.lastIndex = 0;
     for (const match of ctx.raw.matchAll(re)) {
       const index = match.index ?? 0;
-      const rawExcerpt = excerptAt(ctx.raw, index);
-      // Replace any unredacted match with the redacted version to avoid leaking secrets
-      const excerpt = rawExcerpt.split(match[0]).join(redact(match[0]));
+      const excerpt = excerptAt(ctx.raw, index, 60, match[0].length);
 
       evidence.push({
         line: lineAt(ctx.raw, index),

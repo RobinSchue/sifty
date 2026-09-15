@@ -187,6 +187,35 @@ describe("patternHits", () => {
     // Verify the redacted form is present
     expect(excerpt).toMatch(/sk-a\*+/);
   });
+
+  it("redacts a match that spans whitespace collapsed by the excerpt", () => {
+    const config = makeConfig({
+      patterns: { secrets: [{ id: "key", re: "sk-[a-zA-Z0-9]+\\s+[a-zA-Z0-9]+", hint: "hardcoded key" }] },
+    });
+    const ctx = ctxFor("Here is a key: sk-abcdefghijklmnop    qrstuvwxyzTAIL and more text after it");
+    const outcome = measures.patternHits({ ctx, params: { patternSet: "secrets" }, config });
+
+    expect(outcome.value).toBe(1);
+    const excerpt = outcome.evidence?.[0]?.excerpt;
+    expect(excerpt).toBeDefined();
+    expect(excerpt).not.toContain("qrstuvwxyzTAIL");
+    expect(excerpt).toMatch(/sk-a\*+/);
+  });
+
+  it("redacts a match that runs past the end of the excerpt window", () => {
+    const config = makeConfig({
+      patterns: { secrets: [{ id: "key", re: "sk-[a-zA-Z0-9]{80,}", hint: "hardcoded key" }] },
+    });
+    const secret = `sk-${"a".repeat(90)}`;
+    const ctx = ctxFor(`Here is a key: ${secret} and then trailing prose after the secret ends here`);
+    const outcome = measures.patternHits({ ctx, params: { patternSet: "secrets" }, config });
+
+    expect(outcome.value).toBe(1);
+    const excerpt = outcome.evidence?.[0]?.excerpt;
+    expect(excerpt).toBeDefined();
+    expect(excerpt).not.toContain("a".repeat(20));
+    expect(excerpt).toMatch(/sk-a\*+/);
+  });
 });
 
 describe("markerPresence", () => {
