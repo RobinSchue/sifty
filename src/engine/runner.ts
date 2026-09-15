@@ -2,7 +2,7 @@
  * Sifty — check runner.
  *
  * One file in, one report out. This is the only place that knows the order of
- * operations: load config → detect file kind → measure → score.
+ * operations: load config → detect file kind → measure → ask the model → score.
  */
 
 import { readFileSync } from "node:fs";
@@ -11,6 +11,7 @@ import { resolve } from "node:path";
 import { detectFileKind, loadCriteria } from "../config/load.js";
 import type { Check, CriteriaConfig } from "../criteria.types.js";
 import type { AiFinding, Measurement, Report } from "../report.types.js";
+import { runAiChecks, type AiClient } from "./ai.js";
 import { measures } from "./measures.js";
 import { buildReport, resolveCheck } from "./scoring.js";
 import { prepareFile, type FileContext } from "./text.js";
@@ -21,8 +22,10 @@ export interface AnalyzeOptions {
   configPath?: string;
   /** Overrides glob detection — useful for testing and for odd file layouts. */
   fileKind?: string;
-  /** Results of the bundled AI call. Omitted → mechanical checks only. */
+  /** Pre-computed findings (tests, web UI later). When set, no AI call is made. */
   aiFindings?: AiFinding[];
+  /** How to reach the model for `mode: "ai"` checks. Omitted → mechanical checks only. */
+  ai?: { apiKey?: string | undefined; client?: AiClient | undefined };
 }
 
 export interface AnalyzeResult {
@@ -30,25 +33,31 @@ export interface AnalyzeResult {
   context: FileContext;
   /** Checks whose measure threw — the run continues, they become not applicable. */
   failures: { checkId: string; message: string }[];
+  /** Set when the AI call was attempted but produced no usable findings. */
+  aiError?: string | undefined;
 }
 
-export function analyzeFile(filePath: string, options: AnalyzeOptions): AnalyzeResult {
+export async function analyzeFile(
+  filePath: string,
+  options: AnalyzeOptions,
+): Promise<AnalyzeResult> {
   const absolutePath = resolve(process.cwd(), filePath);
   const raw = readFileSync(absolutePath, "utf8");
   return analyzeContent(filePath, raw, options);
 }
 
 /** Same as analyzeFile, but for content already in memory (tests, web UI later). */
-export function analyzeContent(
+export async function analyzeContent(
   filePath: string,
   raw: string,
   options: AnalyzeOptions,
-): AnalyzeResult {
+): Promise<AnalyzeResult> {
   const config = loadCriteria(options.tool, options.configPath);
   const fileKind = options.fileKind ?? detectFileKind(filePath, config);
   const context = prepareFile(filePath, raw);
 
   const { measurements, failures } = runMechanicalChecks(config, context, fileKind);
+  const ai = await collectAiFindings(config, context, fileKind, options);
 
   const report = buildReport({
     config,
@@ -56,10 +65,34 @@ export function analyzeContent(
     fileKind,
     preset: options.preset,
     measurements,
-    aiFindings: options.aiFindings,
+    aiFindings: ai.findings,
   });
 
-  return { report, context, failures };
+  return { report, context, failures, aiError: ai.error };
+}
+
+/**
+ * One bundled model call for every pending AI check — or none at all when the
+ * caller brought findings along or did not ask for AI checks. The AI layer never
+ * throws; a failed call degrades to mechanical-only scoring with a diagnostic.
+ */
+async function collectAiFindings(
+  config: CriteriaConfig,
+  ctx: FileContext,
+  fileKind: string,
+  options: AnalyzeOptions,
+): Promise<{ findings: AiFinding[]; error?: string | undefined }> {
+  if (options.aiFindings) return { findings: options.aiFindings };
+  if (!options.ai) return { findings: [] };
+
+  return runAiChecks({
+    checks: pendingAiChecks(config, fileKind),
+    fileContent: ctx.raw,
+    fileKind,
+    tool: config.tool,
+    apiKey: options.ai.apiKey,
+    client: options.ai.client,
+  });
 }
 
 export function runMechanicalChecks(
@@ -112,7 +145,7 @@ export function runMechanicalChecks(
   return { measurements, failures };
 }
 
-/** Collects the questions for the single bundled AI call — used in the next step. */
+/** Collects the questions for the single bundled AI call. */
 export function pendingAiChecks(config: CriteriaConfig, fileKind: string): Check[] {
   return config.checks
     .map((check) => resolveCheck(check, fileKind))
