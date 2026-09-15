@@ -29,11 +29,22 @@ program
   .option("-c, --config <path>", "Path to a custom criteria config, bypassing config/<tool>.json")
   .option("--no-ai", "Skip the AI checks and score mechanically only")
   .option("--generate-fix-prompt", "Generate AI-driven optimization prompts for the fixes found")
-  .option("--fix-prompt <style>", "Fix prompt style: short (brief list) or full (complete prompt). Default: full", "full")
+  .option(
+    "--fix-prompt <style>",
+    "Fix prompt style: short (brief list) or full (complete prompt). Default: full",
+    "full",
+  )
   .action(
     async (
       file: string,
-      options: { tool: string; preset?: string; config?: string; ai: boolean; generateFixPrompt?: boolean; fixPrompt: string },
+      options: {
+        tool: string;
+        preset?: string;
+        config?: string;
+        ai: boolean;
+        generateFixPrompt?: boolean;
+        fixPrompt: string;
+      },
     ) => {
       if (!existsSync(file)) {
         console.error(chalk.red(`File not found: ${file}`));

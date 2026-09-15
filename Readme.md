@@ -79,6 +79,7 @@ sifty check <file> --tool copilot --generate-fix-prompt
 ```
 
 This generates two formats:
+
 - **`--fix-prompt short`**: Brief suggestion ("these issues found: [...]. Please fix.") — good for quick copy-paste
 - **`--fix-prompt full`** (default when both asked): Complete prompt with your file and detailed context, ready to paste into Claude/ChatGPT
 

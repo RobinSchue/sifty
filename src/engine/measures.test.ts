@@ -190,9 +190,13 @@ describe("patternHits", () => {
 
   it("redacts a match that spans whitespace collapsed by the excerpt", () => {
     const config = makeConfig({
-      patterns: { secrets: [{ id: "key", re: "sk-[a-zA-Z0-9]+\\s+[a-zA-Z0-9]+", hint: "hardcoded key" }] },
+      patterns: {
+        secrets: [{ id: "key", re: "sk-[a-zA-Z0-9]+\\s+[a-zA-Z0-9]+", hint: "hardcoded key" }],
+      },
     });
-    const ctx = ctxFor("Here is a key: sk-abcdefghijklmnop    qrstuvwxyzTAIL and more text after it");
+    const ctx = ctxFor(
+      "Here is a key: sk-abcdefghijklmnop    qrstuvwxyzTAIL and more text after it",
+    );
     const outcome = measures.patternHits({ ctx, params: { patternSet: "secrets" }, config });
 
     expect(outcome.value).toBe(1);
@@ -207,7 +211,9 @@ describe("patternHits", () => {
       patterns: { secrets: [{ id: "key", re: "sk-[a-zA-Z0-9]{80,}", hint: "hardcoded key" }] },
     });
     const secret = `sk-${"a".repeat(90)}`;
-    const ctx = ctxFor(`Here is a key: ${secret} and then trailing prose after the secret ends here`);
+    const ctx = ctxFor(
+      `Here is a key: ${secret} and then trailing prose after the secret ends here`,
+    );
     const outcome = measures.patternHits({ ctx, params: { patternSet: "secrets" }, config });
 
     expect(outcome.value).toBe(1);

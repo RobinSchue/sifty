@@ -234,7 +234,7 @@ describe("generateFixPrompt", () => {
       fileContent: "body",
       fileKind: "scoped",
       tool: "copilot",
-      client: { messages: { parse: async () => ({ parsed_output: {} }) } } as any,
+      client: makeClient(async () => ({ parsed_output: {} })).client,
     });
 
     expect(short).toBe("");

@@ -34,21 +34,21 @@ MVP-Zuschnitt).
 
 ### Fertig (Welle 1 — KI-Schicht)
 
-| Feature | Status | Branch/Commits |
-| --- | --- | --- |
-| Redaction-Fix (`patternHits`) | ✅ | `fix/pattern-hits-redaction` (2 Commits) |
-| Bundled AI call für `mode: "ai"` Checks | ✅ | `feat/ai-layer` (4 Commits) |
-| Runner/CLI-Integration (async) | ✅ | in `feat/ai-layer` |
-| AI path E2E-Tests (110 Tests total) | ✅ | in `feat/ai-layer` |
-| Docs (API Key, offline fallback) | ✅ | in `feat/ai-layer` |
+| Feature                                 | Status | Branch/Commits                           |
+| --------------------------------------- | ------ | ---------------------------------------- |
+| Redaction-Fix (`patternHits`)           | ✅     | `fix/pattern-hits-redaction` (2 Commits) |
+| Bundled AI call für `mode: "ai"` Checks | ✅     | `feat/ai-layer` (4 Commits)              |
+| Runner/CLI-Integration (async)          | ✅     | in `feat/ai-layer`                       |
+| AI path E2E-Tests (110 Tests total)     | ✅     | in `feat/ai-layer`                       |
+| Docs (API Key, offline fallback)        | ✅     | in `feat/ai-layer`                       |
 
 ### Fertig (Welle 2 — AI-genierierte Optimierungsprompts)
 
-| Feature | Status | Branch/Commit |
-| --- | --- | --- |
-| `generateFixPrompt()` Modul | ✅ | `feat/ai-layer` (Commit `bc60643`) |
-| Fix-Prompt-Tests (3 neue) | ✅ | in `feat/ai-layer` |
-| CLI-Integration (`--generate-fix-prompt`) | ✅ | `feat/ai-layer` (Commit `e665ed2`) |
+| Feature                                   | Status | Branch/Commit                      |
+| ----------------------------------------- | ------ | ---------------------------------- |
+| `generateFixPrompt()` Modul               | ✅     | `feat/ai-layer` (Commit `bc60643`) |
+| Fix-Prompt-Tests (3 neue)                 | ✅     | in `feat/ai-layer`                 |
+| CLI-Integration (`--generate-fix-prompt`) | ✅     | `feat/ai-layer` (Commit `e665ed2`) |
 
 ### Nicht fertig (bewusst ausgespart)
 
@@ -74,18 +74,21 @@ b30068a feat(engine): run bundled ai checks from the analyze pipeline
 ```
 
 Davon `fix/pattern-hits-redaction` ist unabhängig:
+
 ```
 71b576e fix(measures): redact secrets inside pattern-hit excerpts
 3b22802 docs(adr): apply prettier formatting
 ```
 
 ### Tests: 110 alle grün, davon:
+
 - 8 für `generateFixPrompt` (neu in Welle 2)
 - 5 für AI-Runner-Path (neu in Welle 1)
 - 12 für Runner.ts (inkl. AI-Path E2E)
 - Rest: Scoring, Config, Measures, Text
 
 ### Gebaut und getestet:
+
 - ✅ `npm run typecheck` — keine Fehler
 - ✅ `npm run lint` — sauber
 - ✅ `npm test` — 110/110 grün
@@ -102,6 +105,7 @@ sifty check <file> --tool copilot --generate-fix-prompt --fix-prompt full
 ```
 
 **Was es macht:**
+
 - Beim AI-Check-Durchlauf wird zusätzlich ein Optimierungsprompt generiert
 - `short`: Kurze Auflistung der Probleme (Ready-to-paste)
 - `full`: Kompletter Prompt mit Dateiinhalt für Claude/ChatGPT (Default, wenn nicht spezifiziert)
@@ -143,6 +147,7 @@ ANTHROPIC_API_KEY=sk-ant-... npm run dev -- check example.instructions.md --tool
 ```
 
 Oder global installieren:
+
 ```bash
 npm run build && npm link
 sifty check example.instructions.md --tool copilot
@@ -188,6 +193,7 @@ Beide von `main` abgezweigt. Kein Push, keine PRs — auf Zuruf.
 ## 11. Was ist die Kernnische?
 
 **Composite Review** — Bewertung MEHRERER Dateien zur Detektierung von Widersprüchen und Überschneidungen:
+
 - Ein AGENTS.md sagt TypeScript, ein Instruction-File sagt any → Konflikt
 - Ein Skill hat `description` unter 50 Tokens, ein anderer über 200 → Redundanz
 - Gleiche Regel in 3 verschiedenen Dateien → Wartbarkeit-Problem
