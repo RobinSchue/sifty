@@ -271,3 +271,54 @@ describe("criteriaConfigSchema — check.overrides", () => {
     expect(criteriaConfigSchema.safeParse(config).success).toBe(true);
   });
 });
+
+describe("criteriaConfigSchema — mode/scoring compatibility", () => {
+  it("rejects an ai check with a mechanical scoring type", () => {
+    const config = makeConfig({
+      checks: [
+        makeCheck({
+          id: "clarity.tone",
+          mode: "ai",
+          question: "Is the tone right?",
+          measure: undefined,
+          scoring: { type: "binary" },
+        }),
+      ],
+    });
+    const result = criteriaConfigSchema.safeParse(config);
+    expect(result.success).toBe(false);
+    expect(firstIssuePath(result)).toBe("checks.0.scoring.type");
+    if (!result.success) {
+      expect(result.error.issues[0]?.message).toMatch(/must use scoring type "ai", not "binary"/);
+    }
+  });
+
+  it("rejects a mechanical check with scoring type ai", () => {
+    const config = makeConfig({
+      checks: [
+        makeCheck({ id: "cost.x", measure: { type: "tokenCount" }, scoring: { type: "ai" } }),
+      ],
+    });
+    const result = criteriaConfigSchema.safeParse(config);
+    expect(result.success).toBe(false);
+    expect(firstIssuePath(result)).toBe("checks.0.scoring.type");
+    if (!result.success) {
+      expect(result.error.issues[0]?.message).toMatch(/cannot use scoring type "ai"/);
+    }
+  });
+
+  it("accepts an ai check with scoring type ai", () => {
+    const config = makeConfig({
+      checks: [
+        makeCheck({
+          id: "clarity.tone",
+          mode: "ai",
+          question: "Is the tone right?",
+          measure: undefined,
+          scoring: { type: "ai" },
+        }),
+      ],
+    });
+    expect(criteriaConfigSchema.safeParse(config).success).toBe(true);
+  });
+});

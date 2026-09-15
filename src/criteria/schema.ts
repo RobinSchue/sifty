@@ -252,6 +252,7 @@ function validateCrossReferences(config: CriteriaConfig, ctx: z.RefinementCtx): 
       });
     }
 
+    validateModeScoring(check.mode, check.scoring, check.id, ["checks", index], ctx);
     if (check.scoring.type === "bands") {
       validateBandOrder(check.scoring.bands, check.id, index, ctx);
     }
@@ -303,6 +304,35 @@ function validatePatternSets(config: CriteriaConfig, ctx: z.RefinementCtx): void
       }
     });
   });
+}
+
+/**
+ * scoring.ts routes by `mode`, not by `scoring.type`: an ai check's score comes
+ * from the model and its `scoring` is never read, while a mechanical check with
+ * `scoring.type: "ai"` gets `undefined` from scoreFromMechanical and silently
+ * never scores. Either mismatch is dead config — reject it at load time.
+ */
+function validateModeScoring(
+  mode: Check["mode"],
+  scoring: Scoring,
+  checkId: string,
+  basePath: (string | number)[],
+  ctx: z.RefinementCtx,
+): void {
+  if (mode === "ai" && scoring.type !== "ai") {
+    ctx.addIssue({
+      code: "custom",
+      path: [...basePath, "scoring", "type"],
+      message: `ai check "${checkId}" must use scoring type "ai", not "${scoring.type}"`,
+    });
+  }
+  if (mode === "mechanical" && scoring.type === "ai") {
+    ctx.addIssue({
+      code: "custom",
+      path: [...basePath, "scoring", "type"],
+      message: `mechanical check "${checkId}" cannot use scoring type "ai"`,
+    });
+  }
 }
 
 /** Bands ascend strictly by `upTo`, and only the LAST band may be open-ended (upTo: null). */
