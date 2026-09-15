@@ -105,10 +105,10 @@ program
       }
       const checksProvider = options.ai && apiKey ? createAnthropicProvider({ apiKey }) : undefined;
 
-      const content = readFileSync(file, "utf8");
-
+      let content: string;
       let result: Awaited<ReturnType<typeof analyze>>;
       try {
+        content = readFileSync(file, "utf8");
         const config = loadCriteria(options.tool, options.config, {
           measureTypes: Object.keys(measures),
         });
