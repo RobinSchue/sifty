@@ -111,13 +111,35 @@ const securityPolicySchema: z.ZodType<SecurityPolicy> = z.object({
 });
 
 /**
- * `overrides` values are loosely typed here (Zod can't cheaply express
- * "Partial<Check> without id/mode/axis" as a static shape check) — the
- * `id`/`mode`/`axis` prohibition and the fileKind-membership check on
- * `overrides`' keys are both enforced in `criteriaConfigSchema`'s
- * `superRefine` below, where the surrounding config (its `fileKinds`) is
- * in scope.
+ * The fields a `check.overrides[fileKind]` entry may set — every Check
+ * field except `id`/`mode`/`axis` (forbidden; enforced in validateOverrides
+ * below, where the surrounding config's `fileKinds` is in scope for the
+ * key-membership check too) and `overrides` itself (no override-of-an-
+ * override). Real per-field validators rather than `z.unknown()`, so e.g.
+ * `weight: "high"` fails to load instead of corrupting scoring.ts's
+ * resolveCheck() spread-merge with a wrongly typed value. The `as
+ * z.ZodType<...>` cast is only for the `exactOptionalPropertyTypes` gap
+ * between Zod's `.optional()` (`T | undefined`) and `Partial<Check>`'s
+ * bare `?:` — the object shape itself is fully checked.
  */
+const checkOverrideSchema = z
+  .object({
+    label: z.string().optional(),
+    weight: z.number().min(0).optional(),
+    appliesTo: z.array(z.string()).optional(),
+    requires: z.array(z.string()).optional(),
+    measure: measureSchema.optional(),
+    scoring: scoringSchema.optional(),
+    severity: severitySchema.optional(),
+    fix: z.string().optional(),
+    question: z.string().optional(),
+  })
+  // .passthrough(), not .strict(): a forbidden key (id/mode/axis) must
+  // SURVIVE parsing so validateOverrides below can see it and raise its
+  // own, more specific "must not set ..." issue — stripping it here would
+  // let a forbidden override through unnoticed.
+  .passthrough();
+
 const checkSchema: z.ZodType<Check> = z.object({
   id: z.string(),
   axis: axisIdSchema,
@@ -131,9 +153,7 @@ const checkSchema: z.ZodType<Check> = z.object({
   severity: severitySchema.optional(),
   fix: z.string(),
   question: z.string().optional(),
-  overrides: z.record(z.string(), z.record(z.string(), z.unknown())).optional() as z.ZodType<
-    Check["overrides"]
-  >,
+  overrides: z.record(z.string(), checkOverrideSchema).optional() as z.ZodType<Check["overrides"]>,
 });
 
 export const criteriaConfigSchema: z.ZodType<CriteriaConfig> = z
