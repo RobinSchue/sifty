@@ -54,7 +54,7 @@ const axisSchema: z.ZodType<Axis> = z.object({
 
 const presetSchema: z.ZodType<Preset> = z.object({
   label: z.string(),
-  weights: z.record(axisIdSchema, z.number()),
+  weights: z.record(axisIdSchema, z.number().min(0)),
 });
 
 const fileKindSchema: z.ZodType<FileKind> = z.object({
