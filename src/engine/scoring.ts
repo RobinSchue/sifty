@@ -238,7 +238,7 @@ function redactAllEvidence(
   return out;
 }
 
-function collectRedactionPatterns(config: CriteriaConfig): PatternDef[] {
+export function collectRedactionPatterns(config: CriteriaConfig): PatternDef[] {
   const setIds = config.security.redactWith ?? [];
   return setIds.flatMap((id) => config.sets.patterns[id] ?? []);
 }

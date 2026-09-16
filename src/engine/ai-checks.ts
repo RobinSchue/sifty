@@ -9,6 +9,7 @@
 import { z } from "zod";
 
 import type { AiProvider, TokenUsage } from "./ai-provider.js";
+import { addUsage, requestStructured } from "./ai-request.js";
 import type { Check } from "../criteria/types.js";
 import type { AiFinding, Evidence } from "../report.types.js";
 
@@ -129,13 +130,12 @@ export async function runAiChecks(args: RunAiChecksArgs): Promise<{
       retryReason,
     });
 
-    const response = await requestFindings(args.provider, request);
-    if (response.usage) {
-      totalUsage = {
-        inputTokens: (totalUsage?.inputTokens ?? 0) + response.usage.inputTokens,
-        outputTokens: (totalUsage?.outputTokens ?? 0) + response.usage.outputTokens,
-      };
-    }
+    const response = await requestStructured(
+      args.provider,
+      { ...request, maxTokens: MAX_TOKENS },
+      aiFindingsResponseSchema,
+    );
+    totalUsage = addUsage(totalUsage, response.usage);
 
     if (response.kind === "api-error") {
       return { findings: [], error: `AI checks failed: ${response.message}`, usage: totalUsage };
@@ -153,7 +153,7 @@ export async function runAiChecks(args: RunAiChecksArgs): Promise<{
       };
     }
 
-    const selected = selectRequestedFindings(response.findings, args.checks);
+    const selected = selectRequestedFindings(response.data.findings, args.checks);
     if (selected.missingIds.length > 0) {
       if (attempt === 0) {
         retryReason = `The previous response was incomplete. Missing check ids: ${selected.missingIds.join(", ")}.`;
@@ -170,48 +170,6 @@ export async function runAiChecks(args: RunAiChecksArgs): Promise<{
   }
 
   return { findings: [], error: "AI response was invalid after one retry.", usage: totalUsage };
-}
-
-type RequestFindingsResult = (
-  | { kind: "ok"; findings: AiFindingsResponse }
-  | { kind: "invalid"; message: string }
-  | { kind: "api-error"; message: string }
-) & { usage?: TokenUsage | undefined };
-
-async function requestFindings(
-  provider: AiProvider,
-  request: { system: string; user: string },
-): Promise<RequestFindingsResult> {
-  try {
-    const response = await provider.complete({
-      system: request.system,
-      user: request.user,
-      schema: aiFindingsResponseSchema,
-      maxTokens: MAX_TOKENS,
-    });
-    const parsed = aiFindingsResponseSchema.safeParse(response.output);
-    if (!parsed.success) {
-      return { kind: "invalid", message: describeZodError(parsed.error), usage: response.usage };
-    }
-    return { kind: "ok", findings: parsed.data.findings, usage: response.usage };
-  } catch (error) {
-    const message = oneLine(error instanceof Error ? error.message : String(error));
-    return looksLikeStructuredOutputError(message)
-      ? { kind: "invalid", message }
-      : { kind: "api-error", message };
-  }
-}
-
-function describeZodError(error: z.ZodError): string {
-  const firstIssue = error.issues[0];
-  if (!firstIssue) return "The response did not match the expected findings object.";
-
-  const path = firstIssue.path.length > 0 ? firstIssue.path.join(".") : "response";
-  return oneLine(`The response field "${path}" ${firstIssue.message}.`);
-}
-
-function looksLikeStructuredOutputError(message: string): boolean {
-  return /parse structured output|structured output|json/i.test(message);
 }
 
 function selectRequestedFindings(
@@ -263,8 +221,4 @@ function normalizeEvidence(
     excerpt: entry.excerpt,
     hint: entry.hint,
   }));
-}
-
-function oneLine(value: string): string {
-  return value.replace(/\s+/g, " ").trim();
 }

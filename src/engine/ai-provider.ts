@@ -25,7 +25,7 @@ export interface AiCompletionRequest<T> {
 }
 
 export interface AiCompletionResult {
-  /** Not yet validated against `schema` — the caller does that (see ai-checks.ts, fixprompt/generate.ts). */
+  /** Not yet validated against `schema` — the caller does that (see ai-request.ts, fixprompt/generate.ts). */
   output: unknown;
   /** Absent when the provider does not report usage, or none was requested. */
   usage?: TokenUsage | undefined;

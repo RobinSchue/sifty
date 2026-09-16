@@ -176,10 +176,10 @@ export function redactMatches(text: string, patterns: PatternDef[]): string {
 }
 
 /** Applies `redactMatches` to every excerpt/hint in an Evidence array. */
-export function redactEvidence(
-  evidence: Evidence[] | undefined,
+export function redactEvidence<T extends Evidence>(
+  evidence: T[] | undefined,
   patterns: PatternDef[],
-): Evidence[] | undefined {
+): T[] | undefined {
   if (!evidence || patterns.length === 0) return evidence;
   return evidence.map((entry) => ({
     ...entry,
