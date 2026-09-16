@@ -17,6 +17,7 @@ import type {
   PatternDef,
   Preset,
 } from "../criteria/types.js";
+import type { CompositeRule, CompositeRules } from "../composite/rules.js";
 
 const ALL_AXES: AxisId[] = ["clarity", "structure", "completeness", "cost", "security"];
 
@@ -121,6 +122,32 @@ export function makeCheck(overrides: Partial<Check> & Pick<Check, "id" | "measur
     appliesTo: [],
     scoring: { type: "binary" },
     fix: `fix for ${overrides.id}`,
+    ...overrides,
+  };
+}
+
+/** A minimal, valid composite rule — override only what a test needs. */
+export function makeCompositeRule(overrides: Partial<CompositeRule> = {}): CompositeRule {
+  const id = overrides.id ?? "composite.example";
+  return {
+    id,
+    label: id,
+    severity: "warn",
+    minFiles: 2,
+    maxFindings: 10,
+    maxInputChars: 100_000,
+    question: `Question for ${id}?`,
+    fix: `fix for ${id}`,
+    ...overrides,
+  };
+}
+
+export function makeCompositeRules(overrides: Partial<CompositeRules> = {}): CompositeRules {
+  return {
+    schemaVersion: 1,
+    rulesVersion: "0.0.0-test",
+    updated: "2026-01-01",
+    rules: [makeCompositeRule()],
     ...overrides,
   };
 }

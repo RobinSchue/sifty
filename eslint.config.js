@@ -33,6 +33,36 @@ const CLI_ONLY_BAN = {
     "chalk/commander/dotenv are composition-root and presentation concerns — import them only in src/cli.ts (chalk is also allowed under src/reporting/**).",
 };
 
+const COMPOSITE_LAYER_BANS = [
+  {
+    group: ["**/providers/*"],
+    message:
+      "src/composite/** must depend on the AiProvider port (src/engine/ai-provider.ts), not a concrete provider module.",
+  },
+  {
+    group: ["**/reporting/*"],
+    message: "src/composite/** produces a CompositeReview — formatting it is src/reporting/'s job.",
+  },
+];
+
+const NO_PROCESS_ACCESS = (layer) => [
+  {
+    object: "process",
+    property: "env",
+    message: `${layer} must not read process.env — pass values in as parameters.`,
+  },
+  {
+    object: "process",
+    property: "cwd",
+    message: `${layer} must not resolve paths against cwd — that is a cli.ts concern.`,
+  },
+  {
+    object: "process",
+    property: "exitCode",
+    message: `${layer} must not set the exit code — return a result and let cli.ts decide.`,
+  },
+];
+
 export default tseslint.config(
   {
     ignores: ["dist/**", "node_modules/**"],
@@ -68,27 +98,37 @@ export default tseslint.config(
               message:
                 "src/engine/** must depend on the AiProvider port (ai-provider.ts), not a concrete provider module.",
             },
+            {
+              group: ["**/composite/*"],
+              message:
+                "src/engine/** must not depend on composite — the direction is engine → composite, never the reverse.",
+            },
           ],
         },
       ],
-      "no-restricted-properties": [
+      "no-restricted-properties": ["error", ...NO_PROCESS_ACCESS("src/engine/**")],
+    },
+  },
+  {
+    // R7: composite review is pure like the engine — several files in, findings
+    // out, the model only through the port. load.ts (next block) is the one
+    // file allowed to read config/composite.json.
+    files: ["src/composite/**/*.ts"],
+    ignores: ["src/composite/**/*.test.ts", "src/composite/load.ts"],
+    rules: {
+      "no-restricted-imports": [
         "error",
-        {
-          object: "process",
-          property: "env",
-          message: "src/engine/** must not read process.env — pass values in as parameters.",
-        },
-        {
-          object: "process",
-          property: "cwd",
-          message: "src/engine/** must not resolve paths against cwd — that is a cli.ts concern.",
-        },
-        {
-          object: "process",
-          property: "exitCode",
-          message:
-            "src/engine/** must not set the exit code — return a Report and let cli.ts decide.",
-        },
+        { patterns: [SDK_BAN, NODE_IO_BAN, CLI_ONLY_BAN, ...COMPOSITE_LAYER_BANS] },
+      ],
+      "no-restricted-properties": ["error", ...NO_PROCESS_ACCESS("src/composite/**")],
+    },
+  },
+  {
+    files: ["src/composite/load.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        { patterns: [SDK_BAN, CLI_ONLY_BAN, ...COMPOSITE_LAYER_BANS] },
       ],
     },
   },
@@ -106,9 +146,15 @@ export default tseslint.config(
             SDK_BAN,
             CLI_ONLY_BAN,
             {
-              group: ["**/engine/*", "**/providers/*", "**/reporting/*", "**/fixprompt/*"],
+              group: [
+                "**/engine/*",
+                "**/providers/*",
+                "**/reporting/*",
+                "**/fixprompt/*",
+                "**/composite/*",
+              ],
               message:
-                "src/criteria/** must not depend on the engine, providers, reporting or fixprompt.",
+                "src/criteria/** must not depend on the engine, providers, reporting, fixprompt or composite.",
             },
           ],
         },
@@ -143,10 +189,10 @@ export default tseslint.config(
         {
           patterns: [
             {
-              group: ["**/engine/*"],
+              group: ["**/engine/*", "**/composite/*"],
               allowTypeImports: true,
               message:
-                "src/reporting/** may import engine TYPES only (`import type { Report }`) — never engine code.",
+                "src/reporting/** may import engine/composite TYPES only (`import type { Report }`) — never their code.",
             },
           ],
         },

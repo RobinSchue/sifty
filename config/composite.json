@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "rulesVersion": "0.1.0",
+  "updated": "2026-09-16",
+  "rules": [
+    {
+      "id": "composite.contradictions",
+      "label": "Contradictions between files",
+      "severity": "warn",
+      "minFiles": 2,
+      "maxFindings": 10,
+      "maxInputChars": 240000,
+      "question": "Find instructions in DIFFERENT files that cannot both be followed at the same time: one file requires what another forbids, or two files set incompatible defaults for the same decision (language, formatting, library, testing policy, tone). Only report conflicts between different files. Complementary, redundant or more-specific instructions are NOT contradictions. If one file explicitly states precedence over the other, that is not a contradiction either. Quote the shortest excerpt from each side and give line numbers.",
+      "fix": "Resolve the conflict in one of the files, or state precedence explicitly (\"the repo-wide file wins unless a scoped file says otherwise\")."
+    }
+  ]
+}
