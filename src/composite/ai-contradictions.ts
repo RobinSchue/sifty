@@ -36,7 +36,7 @@ const MAX_TOKENS = 4096;
 const SYSTEM_PROMPT = [
   "You are reviewing several instruction files that are all loaded into the same AI coding assistant.",
   "Report only genuine conflicts BETWEEN different files, never within one file.",
-  "Refer to files only by the file ids given; never invent ids.",
+  "In evidence, refer to files only by the file ids given; never invent ids. In summary and rationale, name files by their path, never by id.",
   "An empty findings array is a valid and expected answer when the files agree.",
   "Return only structured output matching the requested schema.",
 ].join(" ");

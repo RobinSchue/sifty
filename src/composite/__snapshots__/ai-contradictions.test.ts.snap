@@ -1,7 +1,7 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`buildCompositeRequest > pins the full prompt for the real contradiction rule over the fixtures 1`] = `
-"You are reviewing several instruction files that are all loaded into the same AI coding assistant. Report only genuine conflicts BETWEEN different files, never within one file. Refer to files only by the file ids given; never invent ids. An empty findings array is a valid and expected answer when the files agree. Return only structured output matching the requested schema.
+"You are reviewing several instruction files that are all loaded into the same AI coding assistant. Report only genuine conflicts BETWEEN different files, never within one file. In evidence, refer to files only by the file ids given; never invent ids. In summary and rationale, name files by their path, never by id. An empty findings array is a valid and expected answer when the files agree. Return only structured output matching the requested schema.
 
 Rule: composite.contradictions — Contradictions between files
 
