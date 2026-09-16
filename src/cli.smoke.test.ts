@@ -17,8 +17,9 @@ const CLI_ENTRY = resolve(process.cwd(), "src/index.ts");
 const GOLDEN_DIR = resolve(process.cwd(), "src/testing/golden");
 
 function runCli(args: string[]) {
-  const env = { ...process.env };
-  delete env["ANTHROPIC_API_KEY"];
+  // Empty, not deleted: dotenv fills in missing variables from a local .env,
+  // but leaves present ones alone — so this keeps a developer's key out of the run.
+  const env = { ...process.env, ANTHROPIC_API_KEY: "" };
   return spawnSync("npx", ["tsx", CLI_ENTRY, ...args], {
     encoding: "utf8",
     env,
@@ -167,5 +168,55 @@ describe("CLI smoke test — boundary invariants", () => {
     expect(result.status).toBe(1);
     const parsed = JSON.parse(result.stdout) as { report: { blockers: { checkId: string }[] } };
     expect(parsed.report.blockers.map((b) => b.checkId)).toContain("security.secrets");
+  });
+});
+
+describe("CLI smoke test — composite", () => {
+  const COMPOSITE_DIR = resolve(process.cwd(), "src/testing/composite");
+  const TWO_FILES = [
+    resolve(COMPOSITE_DIR, "repo-wide.copilot-instructions.md"),
+    resolve(COMPOSITE_DIR, "scoped.instructions.md"),
+  ];
+
+  it("runs without an API key, explains why it could not review, and still exits 0", () => {
+    const result = runCli(["composite", ...TWO_FILES]);
+
+    expect(result.status).toBe(0);
+    expect(result.stderr).toContain("ANTHROPIC_API_KEY is not set");
+    expect(result.stdout).toContain("Composite review: 2 files");
+    expect(result.stdout).toContain("Review incomplete: Composite review requires an AI provider.");
+    expect(result.stdout).not.toContain("No contradictions found");
+  });
+
+  it("--format json prints the { review, error, usage } contract", () => {
+    const result = runCli(["composite", ...TWO_FILES, "--format", "json"]);
+
+    expect(result.status).toBe(0);
+    const parsed = JSON.parse(result.stdout) as Record<string, unknown>;
+    expect(Object.keys(parsed).sort()).toEqual(["error", "review"]);
+    const review = parsed["review"] as { files: { fileKind: string }[]; ruleIds: string[] };
+    expect(review.files.map((file) => file.fileKind)).toEqual(["scoped", "scoped"]);
+    expect(review.ruleIds).toEqual(["composite.contradictions"]);
+  });
+
+  it("refuses a single file", () => {
+    const result = runCli(["composite", TWO_FILES[0]!]);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("at least two files");
+  });
+
+  it("exits 1 for a missing file", () => {
+    const result = runCli(["composite", TWO_FILES[0]!, "does-not-exist.md"]);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("File not found: does-not-exist.md");
+  });
+
+  it("exits 1 for a missing --rules file", () => {
+    const result = runCli(["composite", ...TWO_FILES, "--rules", "no-such-rules.json"]);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("No composite rules file");
   });
 });

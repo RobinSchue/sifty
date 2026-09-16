@@ -16,12 +16,17 @@ import chalk from "chalk";
 import { Command, Option } from "commander";
 import { config as loadEnv } from "dotenv";
 
-import { loadCriteria } from "./criteria/load.js";
+import { loadCompositeRules } from "./composite/load.js";
+import { type CompositeFile, reviewComposite } from "./composite/review.js";
+import { detectFileKind, loadCriteria } from "./criteria/load.js";
 import type { TokenUsage } from "./engine/ai-provider.js";
 import { measures } from "./engine/measures.js";
 import { analyze } from "./engine/runner.js";
+import { collectRedactionPatterns } from "./engine/scoring.js";
 import { generateFixPrompt } from "./fixprompt/generate.js";
 import { createAnthropicProvider } from "./providers/anthropic.js";
+import { formatCompositeJson } from "./reporting/composite-json.js";
+import { formatCompositeTerminal } from "./reporting/composite-terminal.js";
 import { formatJson } from "./reporting/json.js";
 import { formatTerminal } from "./reporting/terminal.js";
 
@@ -37,6 +42,8 @@ const PACKAGE_JSON = JSON.parse(readFileSync(resolve(HERE, "../package.json"), "
 
 /** Higher-quality tier for the fix prompt — a human reads this directly, worth the extra cost. */
 const FIX_PROMPT_MODEL = "claude-sonnet-5";
+/** Same tier for the composite review: reasoning across files is closer to the fix prompt than to per-file scoring, and a run is rare. */
+const COMPOSITE_MODEL = "claude-sonnet-5";
 
 const program = new Command();
 
@@ -175,7 +182,10 @@ program
       }
 
       if (options.showTokens) {
-        printTokenUsage(result.usage, fixPromptUsage);
+        printTokenUsage([
+          ["checks", result.usage],
+          ["fix prompt", fixPromptUsage],
+        ]);
       }
 
       if (result.report.blockers.length > 0) {
@@ -184,19 +194,105 @@ program
     },
   );
 
-function printTokenUsage(checksUsage?: TokenUsage, fixPromptUsage?: TokenUsage): void {
+program
+  .command("composite")
+  .description("Reviews several files together for contradictions (no score)")
+  .argument("<files...>", "Paths of the files to review together (at least two)")
+  .option(
+    "-t, --tool <tool>",
+    "Tool whose file kinds label the files and whose redaction patterns apply",
+    "copilot",
+  )
+  .option("-c, --config <path>", "Path to a custom criteria config, bypassing config/<tool>.json")
+  .option(
+    "--rules <path>",
+    "Path to a custom composite rules file, bypassing config/composite.json",
+  )
+  .option("--show-tokens", "Print input/output token usage for each AI call made")
+  .addOption(
+    new Option("--format <format>", "Output format: terminal (human-readable) or json")
+      .choices(["terminal", "json"])
+      .default("terminal"),
+  )
+  .action(
+    async (
+      paths: string[],
+      options: {
+        tool: string;
+        config?: string;
+        rules?: string;
+        showTokens?: boolean;
+        format: "terminal" | "json";
+      },
+    ) => {
+      if (paths.length < 2) {
+        console.error(chalk.red("A composite review needs at least two files."));
+        process.exitCode = 1;
+        return;
+      }
+      const missing = paths.find((path) => !existsSync(path));
+      if (missing) {
+        console.error(chalk.red(`File not found: ${missing}`));
+        process.exitCode = 1;
+        return;
+      }
+
+      const apiKey = process.env["ANTHROPIC_API_KEY"];
+      if (!apiKey) {
+        console.error(
+          chalk.dim("Composite review skipped: ANTHROPIC_API_KEY is not set — it needs the model."),
+        );
+      }
+      const provider = apiKey
+        ? createAnthropicProvider({ apiKey, model: COMPOSITE_MODEL })
+        : undefined;
+
+      let result: Awaited<ReturnType<typeof reviewComposite>>;
+      try {
+        const config = loadCriteria(options.tool, options.config, {
+          measureTypes: Object.keys(measures),
+        });
+        const rules = loadCompositeRules(options.rules);
+        const files: CompositeFile[] = paths.map((path) => ({
+          path,
+          content: readFileSync(path, "utf8"),
+          fileKind: detectFileKind(path, config),
+        }));
+        result = await reviewComposite(files, {
+          rules,
+          redactPatterns: collectRedactionPatterns(config),
+          ...(provider ? { provider } : {}),
+        });
+      } catch (error) {
+        console.error(chalk.red(error instanceof Error ? error.message : String(error)));
+        process.exitCode = 1;
+        return;
+      }
+
+      if (options.format === "json") {
+        console.log(formatCompositeJson(result));
+        return;
+      }
+
+      console.log(formatCompositeTerminal(result));
+      if (options.showTokens) {
+        printTokenUsage([["composite", result.usage]]);
+      }
+    },
+  );
+
+function printTokenUsage(entries: [label: string, usage: TokenUsage | undefined][]): void {
   console.log();
   console.log(chalk.bold("Token usage:"));
-  if (!checksUsage && !fixPromptUsage) {
+  const reported = entries.filter((entry): entry is [string, TokenUsage] => entry[1] !== undefined);
+  if (reported.length === 0) {
     console.log(chalk.dim("  no AI call was made"));
     return;
   }
-  if (checksUsage) {
-    console.log(`  checks:     ${checksUsage.inputTokens} in / ${checksUsage.outputTokens} out`);
-  }
-  if (fixPromptUsage) {
+  const width = Math.max(...reported.map(([label]) => label.length)) + 1;
+  for (const [label, usage] of reported) {
     console.log(
-      `  fix prompt: ${fixPromptUsage.inputTokens} in / ${fixPromptUsage.outputTokens} out`,
+      `  ${`${label}:`.padEnd(width + 1)} ${usage.inputTokens} in / ${usage.outputTokens} out`,
     );
   }
 }

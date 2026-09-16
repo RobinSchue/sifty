@@ -1,0 +1,89 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`formatCompositeJson > serializes review, error and usage — and nothing else 1`] = `
+"{
+  "review": {
+    "files": [
+      {
+        "path": ".github/copilot-instructions.md",
+        "fileKind": "repo-wide"
+      },
+      {
+        "path": "src/ts.instructions.md",
+        "fileKind": "scoped"
+      }
+    ],
+    "rulesVersion": "0.1.0",
+    "ruleIds": [
+      "composite.contradictions"
+    ],
+    "findings": [
+      {
+        "ruleId": "composite.contradictions",
+        "severity": "warn",
+        "summary": "Tabs vs. spaces",
+        "rationale": "The repo-wide file requires tabs; the scoped file forbids them.",
+        "fix": "Pick one, or state precedence.",
+        "evidence": [
+          {
+            "file": ".github/copilot-instructions.md",
+            "line": 6,
+            "excerpt": "Use tabs for indentation"
+          },
+          {
+            "file": "src/ts.instructions.md",
+            "excerpt": "Indent with two spaces, never tabs"
+          }
+        ]
+      }
+    ]
+  },
+  "usage": {
+    "inputTokens": 10,
+    "outputTokens": 2
+  }
+}"
+`;
+
+exports[`formatCompositeTerminal > renders findings with file, line and excerpt per evidence entry 1`] = `
+"
+Composite review: 2 files
+  .github/copilot-instructions.md  (repo-wide)
+  src/ts.instructions.md  (scoped)
+Rules: composite.contradictions  v0.1.0
+
+2 finding(s):
+
+   1. [warn] Tabs vs. spaces
+      .github/copilot-instructions.md:6 — "Use tabs for indentation"
+      src/ts.instructions.md — "Indent with two spaces, never tabs"
+      The repo-wide file requires tabs; the scoped file forbids them.
+      Fix: Pick one, or state precedence.
+
+   2. [info] Minor
+      .github/copilot-instructions.md:6 — "Use tabs for indentation"
+      src/ts.instructions.md — "Indent with two spaces, never tabs"
+      The repo-wide file requires tabs; the scoped file forbids them.
+      Fix: Pick one, or state precedence."
+`;
+
+exports[`formatCompositeTerminal > says so when nothing was found 1`] = `
+"
+Composite review: 2 files
+  .github/copilot-instructions.md  (repo-wide)
+  src/ts.instructions.md  (scoped)
+Rules: composite.contradictions  v0.1.0
+
+No contradictions found across 2 files."
+`;
+
+exports[`formatCompositeTerminal > shows the error instead of a clean verdict when the review could not run 1`] = `
+"
+Composite review: 2 files
+  .github/copilot-instructions.md  (repo-wide)
+  src/ts.instructions.md  (scoped)
+Rules: composite.contradictions  v0.1.0
+
+Review incomplete: Composite review requires an AI provider.
+"
+`;
