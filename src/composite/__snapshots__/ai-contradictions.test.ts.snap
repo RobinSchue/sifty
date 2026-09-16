@@ -1,0 +1,45 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`buildCompositeRequest > pins the full prompt for the real contradiction rule over the fixtures 1`] = `
+"You are reviewing several instruction files that are all loaded into the same AI coding assistant. Report only genuine conflicts BETWEEN different files, never within one file. Refer to files only by the file ids given; never invent ids. An empty findings array is a valid and expected answer when the files agree. Return only structured output matching the requested schema.
+
+Rule: composite.contradictions — Contradictions between files
+
+Find instructions in DIFFERENT files that cannot both be followed at the same time: one file requires what another forbids, or two files set incompatible defaults for the same decision (language, formatting, library, testing policy, tone). Only report conflicts between different files. Complementary, redundant or more-specific instructions are NOT contradictions. If one file explicitly states precedence over the other, that is not a contradiction either. Quote the shortest excerpt from each side and give line numbers.
+
+Return at most 10 findings. Every finding must cite at least two different file ids.
+
+Each finding must contain: summary, rationale, and evidence[] with fileId, optional 1-based line, and a short excerpt.
+
+Files: 2
+
+--- file id: f1, path: src/testing/composite/repo-wide.copilot-instructions.md, kind: repo-wide ---
+\`\`\`text
+# Repository instructions
+
+## Language
+
+- All code comments and commit messages are written in English.
+- Use tabs for indentation in every file.
+
+## Testing
+
+- Every change ships with a unit test.
+
+\`\`\`
+
+--- file id: f2, path: src/testing/composite/scoped.instructions.md, kind: scoped ---
+\`\`\`text
+---
+description: Rules for the TypeScript sources
+applyTo: "src/**/*.ts"
+---
+
+# TypeScript rules
+
+- Indent with two spaces, never tabs.
+- Comments may be written in German when they explain domain terms.
+- Prefer small, single-purpose functions.
+
+\`\`\`"
+`;

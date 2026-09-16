@@ -1,0 +1,47 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`reviewComposite > runs every applicable rule through the provider and returns its findings 1`] = `
+{
+  "review": {
+    "files": [
+      {
+        "fileKind": "repo-wide",
+        "path": "a.md",
+      },
+      {
+        "fileKind": "scoped",
+        "path": "b.md",
+      },
+    ],
+    "findings": [
+      {
+        "evidence": [
+          {
+            "excerpt": "Use tabs.",
+            "file": "a.md",
+            "line": 1,
+          },
+          {
+            "excerpt": "Never tabs.",
+            "file": "b.md",
+            "line": 1,
+          },
+        ],
+        "fix": "fix for composite.example",
+        "rationale": "Conflict.",
+        "ruleId": "composite.example",
+        "severity": "warn",
+        "summary": "Tabs",
+      },
+    ],
+    "ruleIds": [
+      "composite.example",
+    ],
+    "rulesVersion": "0.0.0-test",
+  },
+  "usage": {
+    "inputTokens": 50,
+    "outputTokens": 5,
+  },
+}
+`;
